@@ -1,0 +1,389 @@
+.game-section {
+  margin-top: 72px;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+
+  gap: 24px;
+
+  margin-bottom: 22px;
+}
+
+.section-heading h2,
+.catalog-results-heading h2 {
+  margin: 8px 0 0;
+
+  font-size: 1.65rem;
+  letter-spacing: -0.035em;
+}
+
+.section-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+
+  color: var(--text-secondary);
+
+  font-size: 0.82rem;
+  font-weight: 700;
+
+  transition: color 0.2s ease;
+}
+
+.section-link:hover {
+  color: var(--blue-bright);
+}
+
+.games-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(4, minmax(0, 1fr));
+
+  gap: 16px;
+}
+
+.game-card {
+  overflow: hidden;
+
+  border: 1px solid var(--border);
+  border-radius: 14px;
+
+  background: var(--bg-card);
+
+  transition:
+    transform 0.25s ease,
+    border-color 0.25s ease,
+    box-shadow 0.25s ease;
+}
+
+.game-card:hover {
+  transform: translateY(-5px);
+
+  border-color:
+    rgba(137, 147, 255, 0.35);
+
+  box-shadow:
+    0 20px 40px rgba(0, 0, 0, 0.2);
+}
+
+.game-cover {
+  position: relative;
+
+  min-height: 175px;
+
+  overflow: hidden;
+}
+
+.game-cover::before {
+  content: "";
+
+  position: absolute;
+
+  width: 170px;
+  height: 170px;
+
+  right: -35px;
+  bottom: -70px;
+
+  border-radius: 50%;
+
+  background:
+    rgba(255, 255, 255, 0.14);
+
+  filter: blur(20px);
+}
+
+.game-cover-overlay {
+  position: absolute;
+  inset: 0;
+
+  background:
+    linear-gradient(
+      0deg,
+      rgba(6, 9, 18, 0.65),
+      transparent 65%
+    );
+}
+
+.game-cover-mark {
+  position: absolute;
+
+  top: 14px;
+  right: 14px;
+
+  width: 36px;
+  height: 36px;
+
+  display: grid;
+  place-items: center;
+
+  border:
+    1px solid rgba(255, 255, 255, 0.2);
+
+  border-radius: 11px;
+
+  background:
+    rgba(8, 10, 18, 0.32);
+
+  color: rgba(255, 255, 255, 0.8);
+
+  font-weight: 900;
+
+  backdrop-filter: blur(8px);
+}
+
+.game-cover-title {
+  position: absolute;
+
+  left: 15px;
+  bottom: 14px;
+
+  max-width: 75%;
+
+  font-size: 1.05rem;
+  font-weight: 900;
+  line-height: 1.1;
+
+  letter-spacing: -0.035em;
+}
+
+.game-card-content {
+  padding: 14px;
+}
+
+.game-card-content h3 {
+  overflow: hidden;
+
+  margin: 0;
+
+  white-space: nowrap;
+  text-overflow: ellipsis;
+
+  font-size: 0.85rem;
+}
+
+.game-card-bottom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 10px;
+
+  margin-top: 12px;
+}
+
+.game-platform {
+  color: var(--text-muted);
+
+  font-size: 0.65rem;
+}
+
+.game-price {
+  display: inline-flex;
+
+  padding: 4px 8px;
+
+  border-radius: 999px;
+
+  background:
+    rgba(255, 92, 168, 0.13);
+
+  color: #ff8dc1;
+
+  font-size: 0.65rem;
+  font-weight: 800;
+}
+
+.game-cover-ember {
+  background:
+    linear-gradient(
+      135deg,
+      #1d1018,
+      #7a2837,
+      #e18a3d
+    );
+}
+
+.game-cover-forest {
+  background:
+    linear-gradient(
+      135deg,
+      #071d1a,
+      #215947,
+      #8aa66d
+    );
+}
+
+.game-cover-gold {
+  background:
+    linear-gradient(
+      135deg,
+      #17120d,
+      #74522c,
+      #c9a768
+    );
+}
+
+.game-cover-ocean {
+  background:
+    linear-gradient(
+      135deg,
+      #081724,
+      #1f6172,
+      #4bb4bd
+    );
+}
+
+.game-cover-sand {
+  background:
+    linear-gradient(
+      135deg,
+      #28231e,
+      #705c3d,
+      #bda66b
+    );
+}
+
+.game-cover-garden {
+  background:
+    linear-gradient(
+      135deg,
+      #13252c,
+      #397b83,
+      #8fc75f
+    );
+}
+
+.game-cover-storm {
+  background:
+    linear-gradient(
+      135deg,
+      #101522,
+      #364054,
+      #8594a8
+    );
+}
+
+.game-cover-silver {
+  background:
+    linear-gradient(
+      135deg,
+      #1a1c20,
+      #6f7680,
+      #d9d9d6
+    );
+}
+
+.game-cover-duck {
+  background:
+    linear-gradient(
+      135deg,
+      #17404c,
+      #328b96,
+      #d3b34d
+    );
+}
+
+.game-cover-night {
+  background:
+    linear-gradient(
+      135deg,
+      #06070e,
+      #17162a,
+      #36324e
+    );
+}
+
+.game-cover-green {
+  background:
+    linear-gradient(
+      135deg,
+      #102116,
+      #3e7845,
+      #a7bd6a
+    );
+}
+
+.game-cover-fire {
+  background:
+    linear-gradient(
+      135deg,
+      #211018,
+      #80313b,
+      #d9694b
+    );
+}
+
+.game-cover-space {
+  background:
+    linear-gradient(
+      135deg,
+      #0c1025,
+      #283466,
+      #744eac
+    );
+}
+
+.game-cover-violet {
+  background:
+    linear-gradient(
+      135deg,
+      #160d29,
+      #563177,
+      #b77bd4
+    );
+}
+
+.game-cover-stone {
+  background:
+    linear-gradient(
+      135deg,
+      #161718,
+      #3e3d3a,
+      #9a8d75
+    );
+}
+
+.game-cover-sun {
+  background:
+    linear-gradient(
+      135deg,
+      #472117,
+      #bd7543,
+      #ffd261
+    );
+}
+
+.game-cover-orange {
+  background:
+    linear-gradient(
+      135deg,
+      #20120d,
+      #a3441b,
+      #ff8c29
+    );
+}
+
+.game-cover-fog {
+  background:
+    linear-gradient(
+      135deg,
+      #17202a,
+      #4f6873,
+      #b7c3bc
+    );
+}
+
+.game-cover-blue {
+  background:
+    linear-gradient(
+      135deg,
+      #062034,
+      #08718a,
+      #5cc7d6
+    );
+}

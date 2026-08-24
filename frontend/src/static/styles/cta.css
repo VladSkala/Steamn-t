@@ -1,0 +1,36 @@
+.home-bottom-cta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 30px;
+  margin-top: 72px;
+  padding: 42px;
+  border: 1px solid rgba(130, 145, 255, 0.16);
+  border-radius: 22px;
+  background: linear-gradient(
+    135deg,
+    rgba(25, 30, 54, 0.9),
+    rgba(33, 20, 56, 0.85)
+  );
+}
+
+.home-bottom-cta h2 {
+  margin: 12px 0 0;
+  font-size: 2rem;
+  letter-spacing: -0.045em;
+}
+
+.home-bottom-cta p {
+  max-width: 600px;
+  margin: 12px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+@media (max-width: 760px) {
+  .home-bottom-cta {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 28px;
+  }
+}

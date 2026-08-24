@@ -1,18 +1,29 @@
+import { Link } from 'react-router-dom'
+
 function Footer() {
   return (
-    <footer className="border-t border-violet-400/10 bg-[#120b22]">
-      <div className="mx-auto flex w-full max-w-[1180px] flex-col gap-3 px-4 py-6 text-xs text-slate-500 sm:flex-row sm:items-center sm:justify-between sm:px-6 lg:px-8">
-        <div>
-          <p className="font-semibold text-slate-300">
-            Steam<span className="text-violet-400">n&apos;t</span>
+    <footer className="site-footer">
+      <div className="footer-container">
+        <div className="footer-brand">
+          <p className="footer-logo">
+            Steam<span>n</span>’t
           </p>
 
-          <p className="mt-1">
-            Discover, explore and organize your next favorite games.
+          <p className="footer-description">
+            Discover new worlds, keep your library organized
+            and find your next favorite game.
           </p>
         </div>
 
-        <p>Copyright 2026 Steamn&apos;t</p>
+        <div className="footer-links">
+          <Link to="/">Home</Link>
+          <Link to="/catalog">Catalog</Link>
+          <Link to="/profile">Profile</Link>
+        </div>
+
+        <p className="footer-copy">
+          © 2026 Steamn’t
+        </p>
       </div>
     </footer>
   )

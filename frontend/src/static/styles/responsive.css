@@ -1,0 +1,204 @@
+.site-footer {
+  margin-top: 30px;
+
+  border-top: 1px solid var(--border);
+
+  background:
+    rgba(8, 11, 20, 0.72);
+}
+
+.footer-container {
+  width: min(1440px, calc(100% - 48px));
+
+  margin: 0 auto;
+  padding: 34px 0;
+
+  display: grid;
+
+  grid-template-columns:
+    minmax(0, 1fr) auto auto;
+
+  align-items: center;
+
+  gap: 50px;
+}
+
+.footer-logo {
+  margin: 0;
+}
+
+.footer-description {
+  max-width: 380px;
+
+  margin: 8px 0 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.72rem;
+  line-height: 1.6;
+}
+
+.footer-links {
+  display: flex;
+  gap: 18px;
+
+  color: var(--text-muted);
+
+  font-size: 0.75rem;
+}
+
+.footer-links a:hover {
+  color: var(--text-primary);
+}
+
+.footer-copy {
+  margin: 0;
+
+  color: var(--text-muted);
+
+  font-size: 0.7rem;
+}
+
+/* Stability fixes for narrow screens */
+@media (max-width: 760px) {
+  .page-container {
+    width: min(100% - 24px, 1440px);
+  }
+
+  .catalog-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .catalog-search {
+    width: 100%;
+    max-width: none;
+    min-width: 0;
+  }
+
+  .view-switcher {
+    align-self: flex-start;
+  }
+
+  .catalog-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 22px;
+  }
+
+  .catalog-filters {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .catalog-results-heading,
+  .catalog-results-heading > div,
+  .catalog-games-grid,
+  .catalog-games-list {
+    min-width: 0;
+  }
+
+  .hero {
+    min-height: 500px;
+    padding: 28px;
+  }
+
+  .hero-content,
+  .hero-content h1,
+  .hero-content p,
+  .home-bottom-cta,
+  .catalog-hero,
+  .catalog-results-heading {
+    min-width: 0;
+  }
+
+  .hero h1,
+  .catalog-hero h1,
+  .profile-hero h1,
+  .home-bottom-cta h2 {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+
+  .hero-side-card {
+    display: none;
+  }
+
+  .games-grid,
+  .catalog-games-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .game-card-content,
+  .catalog-card-info {
+    min-width: 0;
+  }
+
+  .game-card-content h3,
+  .catalog-card-info h3,
+  .game-cover-title {
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 480px) {
+  .page-container,
+  .footer-container {
+    width: min(100% - 20px, 1440px);
+  }
+
+  .home-page,
+  .catalog-page,
+  .profile-page {
+    padding-bottom: 52px;
+  }
+
+  .hero {
+    min-height: 470px;
+    padding: 22px;
+    border-radius: 16px;
+  }
+
+  .hero h1 {
+    font-size: clamp(2.5rem, 14vw, 4rem);
+    line-height: 0.98;
+    padding-bottom: 0.08em;
+  }
+
+  .catalog-hero h1 {
+    line-height: 1.05;
+  }
+
+  .catalog-results-heading h2 {
+    font-size: clamp(2rem, 10vw, 3rem);
+    line-height: 1.08;
+  }
+
+  .catalog-card.list-view .game-cover {
+    width: 120px;
+    min-height: 80px;
+  }
+
+  .catalog-card.list-view .catalog-card-info {
+    min-width: 0;
+  }
+
+  .hero-actions {
+    gap: 10px;
+  }
+
+  .primary-button,
+  .secondary-button {
+    min-height: 46px;
+    padding: 11px 14px;
+  }
+
+  .profile-hero {
+    padding: 24px;
+  }
+
+  .profile-avatar {
+    width: 72px;
+    height: 72px;
+    font-size: 1.8rem;
+  }
+}
