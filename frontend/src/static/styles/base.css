@@ -1,5 +1,3 @@
-@import "tailwindcss";
-
 :root {
   font-family:
     Inter,
@@ -8,22 +6,19 @@
     BlinkMacSystemFont,
     "Segoe UI",
     sans-serif;
-
   color: #f4f2ff;
+  color-scheme: dark;
 
   --bg-main: #090b16;
   --bg-deep: #070914;
   --bg-panel: #0f1423;
   --bg-card: #141a2b;
   --bg-card-hover: #1a2136;
-
   --border: rgba(151, 164, 255, 0.14);
   --border-strong: rgba(151, 164, 255, 0.25);
-
   --text-primary: #f5f3ff;
   --text-secondary: #b8b8ca;
   --text-muted: #74778d;
-
   --blue: #7b92ff;
   --blue-bright: #9baaff;
   --purple: #9c68ff;
@@ -39,30 +34,25 @@
 
 html {
   min-width: 320px;
+  min-height: 100%;
   background: var(--bg-main);
   scroll-behavior: smooth;
 }
 
 body {
-  margin: 0;
-  overflow-x: hidden;
   min-width: 320px;
   min-height: 100vh;
-
+  margin: 0;
+  overflow-x: hidden;
   background:
-    radial-gradient(
-      circle at 15% 0%,
-      rgba(95, 116, 255, 0.12),
-      transparent 28%
-    ),
-    radial-gradient(
-      circle at 90% 15%,
-      rgba(155, 92, 235, 0.1),
-      transparent 32%
-    ),
+    radial-gradient(circle at 15% 0%, rgba(95, 116, 255, 0.12), transparent 28%),
+    radial-gradient(circle at 90% 15%, rgba(155, 92, 235, 0.1), transparent 32%),
     var(--bg-main);
-
   color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
 }
 
 button,
@@ -77,4 +67,16 @@ button {
 a {
   color: inherit;
   text-decoration: none;
+}
+
+img,
+picture,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:where(a, button, input):focus-visible {
+  outline: 3px solid rgba(155, 170, 255, 0.9);
+  outline-offset: 3px;
 }
