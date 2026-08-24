@@ -1,1 +1,57 @@
 @import "tailwindcss";
+
+:root {
+  font-family:
+    Inter, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+
+  color: #f4f2ff;
+  background: #090b16;
+
+  --bg-main: #090b16;
+  --bg-secondary: #0f1220;
+  --bg-card: #14182b;
+  --bg-card-hover: #1a1f35;
+
+  --border: #2a3150;
+  --border-light: #353d62;
+
+  --text-primary: #f4f2ff;
+  --text-secondary: #b5b4c4;
+  --text-muted: #838398;
+
+  --blue: #6e8cff;
+  --indigo: #7866e8;
+  --purple: #a05ceb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--bg-main);
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+  background:
+    radial-gradient(
+      circle at 20% 10%,
+      rgba(110, 140, 255, 0.12),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 85% 15%,
+      rgba(160, 92, 235, 0.1),
+      transparent 30%
+    ),
+    var(--bg-main);
+  color: var(--text-primary);
+}
+
+button,
+a {
+  font: inherit;
+}
