@@ -1,24 +1,21 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
-
-import GlobalLayout from './layouts/GlobalLayout'
-import AuthLayout from './layouts/AuthLayout'
-
-import HomePage from './pages/HomePage'
-import CatalogPage from './pages/CatalogPage'
-import LoginPage from './pages/LoginPage'
-import RegisterPage from './pages/RegisterPage'
-import ProfilePage from './pages/ProfilePage'
-import SettingsPage from './pages/SettingsPage'
-import NotFoundPage from './pages/NotFoundPage'
+import { Route, Routes } from 'react-router-dom'
 
 import ProtectedRoute from './components/ProtectedRoute'
+import AuthLayout from './layouts/AuthLayout'
+import GlobalLayout from './layouts/GlobalLayout'
+import CatalogPage from './pages/CatalogPage'
+import HomePage from './pages/HomePage'
+import LoginPage from './pages/LoginPage'
+import NotFoundPage from './pages/NotFoundPage'
+import ProfilePage from './pages/ProfilePage'
+import RegisterPage from './pages/RegisterPage'
+import SettingsPage from './pages/SettingsPage'
 
 function App() {
   return (
     <Routes>
       <Route element={<GlobalLayout />}>
         <Route index element={<HomePage />} />
-
         <Route path="catalog" element={<CatalogPage />} />
 
         <Route
@@ -38,16 +35,15 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        <Route path="404" element={<NotFoundPage />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       <Route element={<AuthLayout />}>
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
       </Route>
-
-      <Route path="404" element={<NotFoundPage />} />
-
-      <Route path="*" element={<Navigate to="/404" replace />} />
     </Routes>
   )
 }
