@@ -1,0 +1,36 @@
+.app-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-main {
+  flex: 1;
+}
+
+.page-container {
+  width: min(1440px, calc(100% - 48px));
+  margin: 0 auto;
+}
+
+.text-page {
+  min-height: 60vh;
+  padding: 48px 0 72px;
+}
+
+.text-page h1 {
+  margin: 14px 0 0;
+  font-size: clamp(2.25rem, 5vw, 4rem);
+  line-height: 1.05;
+  letter-spacing: -0.055em;
+  overflow-wrap: anywhere;
+}
+
+.text-page p:last-child {
+  max-width: 42rem;
+  margin: 20px 0 0;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  line-height: 1.8;
+  overflow-wrap: anywhere;
+}
