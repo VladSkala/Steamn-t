@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { useAuth } from '../hooks/useAuth'
 
 const navigationItems = [
   { label: 'Home', to: '/' },
@@ -8,6 +9,7 @@ const navigationItems = [
 
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
+  const { isAuthenticated, logout } = useAuth()
   const headerRef = useRef(null)
 
   const closeMenu = () => setMenuOpen(false)
@@ -85,13 +87,17 @@ function Header() {
           </nav>
 
           <div className="header-actions">
-            <Link to="/login" className="login-button" onClick={closeMenu}>
-              Login
-            </Link>
-
-            <Link to="/register" className="signup-button" onClick={closeMenu}>
-              Sign up
-            </Link>
+            {isAuthenticated ? (
+              <>
+                <Link to="/profile" className="login-button" onClick={closeMenu}>Profile</Link>
+                <button type="button" className="signup-button" onClick={() => { logout(); closeMenu() }}>Logout</button>
+              </>
+            ) : (
+              <>
+                <Link to="/login" className="login-button" onClick={closeMenu}>Login</Link>
+                <Link to="/register" className="signup-button" onClick={closeMenu}>Sign up</Link>
+              </>
+            )}
           </div>
         </div>
       </div>
