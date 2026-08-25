@@ -1,3 +1,4 @@
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 
 const recommendedGames = [
@@ -145,6 +146,27 @@ function GameCard({ game }) {
 }
 
 function GameSection({ title, games }) {
+  const sliderRef = useRef(null)
+
+  const scrollGames = (direction) => {
+    const slider = sliderRef.current
+
+    if (!slider) {
+      return
+    }
+
+    const firstCard = slider.querySelector('.game-card')
+    const gap = 18
+    const amount = firstCard
+      ? firstCard.getBoundingClientRect().width + gap
+      : slider.clientWidth * 0.85
+
+    slider.scrollBy({
+      left: direction * amount,
+      behavior: 'smooth',
+    })
+  }
+
   return (
     <section className="game-section">
       <div className="section-heading">
@@ -156,13 +178,35 @@ function GameSection({ title, games }) {
           <h2>{title}</h2>
         </div>
 
-        <Link to="/catalog" className="section-link">
-          View all
-          <span>→</span>
-        </Link>
+        <div className="section-actions">
+          <div className="slider-controls">
+            <button
+              type="button"
+              className="slider-button"
+              aria-label={`Previous games in ${title}`}
+              onClick={() => scrollGames(-1)}
+            >
+              ←
+            </button>
+
+            <button
+              type="button"
+              className="slider-button"
+              aria-label={`Next games in ${title}`}
+              onClick={() => scrollGames(1)}
+            >
+              →
+            </button>
+          </div>
+
+          <Link to="/catalog" className="section-link">
+            View all
+            <span>→</span>
+          </Link>
+        </div>
       </div>
 
-      <div className="games-grid">
+      <div ref={sliderRef} className="games-slider">
         {games.map((game) => (
           <GameCard
             key={game.title}
@@ -181,7 +225,7 @@ function HomePage() {
         <div className="hero-background">
           <div className="hero-mountain hero-mountain-left" />
           <div className="hero-mountain hero-mountain-center" />
-          <div className="hero-castle" />
+          
           <div className="hero-glow" />
           <div className="hero-stars" />
         </div>
@@ -220,23 +264,7 @@ function HomePage() {
           </div>
         </div>
 
-        <div className="hero-side-card">
-          <span className="side-card-label">
-            FEATURED WORLD
-          </span>
 
-          <strong>
-            A new adventure
-            is waiting.
-          </strong>
-
-          <div className="side-card-line" />
-
-          <span className="side-card-small">
-            Explore a growing collection
-            of games and worlds.
-          </span>
-        </div>
       </section>
 
       <section className="quick-features">

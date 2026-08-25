@@ -126,7 +126,7 @@ function CatalogPage() {
 
       <section className="catalog-toolbar">
         <div className="catalog-search">
-          <span>⌕</span>
+          <span className="search-icon" aria-hidden="true">⌕</span>
 
           <input
             type="text"
@@ -137,6 +137,10 @@ function CatalogPage() {
             }
           />
         </div>
+
+        <span className="catalog-count" aria-live="polite">
+          {filteredGames.length} games found
+        </span>
 
         <div className="view-switcher">
           <button
@@ -241,19 +245,7 @@ function CatalogPage() {
           </div>
         </aside>
 
-        <section>
-          <div className="catalog-results-heading">
-            <div>
-              <span className="section-kicker">
-                CATALOG
-              </span>
-
-              <h2>
-                {filteredGames.length} games found
-              </h2>
-            </div>
-          </div>
-
+        <section className="catalog-results">
           {filteredGames.length > 0 ? (
             <div
               className={
