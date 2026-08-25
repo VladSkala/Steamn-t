@@ -1,110 +1,70 @@
 import { useMemo, useState } from 'react'
 
-const games = [
-  {
-    title: 'Fallout 4',
-    price: '19.99$',
-    type: 'storm',
-    genre: 'RPG',
-  },
-  {
-    title: 'The Elder Scrolls V: Skyrim',
-    price: '39.99$',
-    type: 'stone',
-    genre: 'RPG',
-  },
-  {
-    title: 'Hogwarts Legacy',
-    price: '59.99$',
-    type: 'violet',
-    genre: 'Adventure',
-  },
-  {
-    title: 'Elden Ring',
-    price: '59.99$',
-    type: 'ember',
-    genre: 'Action',
-  },
-  {
-    title: 'Final Fantasy XVI',
-    price: '69.99$',
-    type: 'fire',
-    genre: 'RPG',
-  },
-  {
-    title: 'Black Desert',
-    price: '29.99$',
-    type: 'night',
-    genre: 'MMORPG',
-  },
-  {
-    title: 'Monster Hunter Wilds',
-    price: '69.99$',
-    type: 'forest',
-    genre: 'Action',
-  },
-  {
-    title: 'Sea of Thieves',
-    price: '39.99$',
-    type: 'ocean',
-    genre: 'Adventure',
-  },
-  {
-    title: 'Dying Light',
-    price: '29.99$',
-    type: 'fog',
-    genre: 'Action',
-  },
-]
+import CatalogFeedback from '../components/CatalogFeedback'
+import GameCard from '../components/GameCard'
+import useCatalogData from '../hooks/useCatalogData'
 
-function CatalogCard({ game, view }) {
-  return (
-    <article className={`catalog-card ${view === 'list' ? 'list-view' : ''}`}>
-      <div className={`game-cover game-cover-${game.type}`}>
-        <div className="game-cover-overlay" />
+const collectGenres = (games, apiGenres) => {
+  const genresById = new Map()
 
-        <span className="game-cover-mark">
-          S
-        </span>
+  apiGenres.forEach((genre) => {
+    if (genre?.id != null && genre?.name) {
+      genresById.set(String(genre.id), genre)
+    }
+  })
 
-        <span className="game-cover-title">
-          {game.title}
-        </span>
-      </div>
+  games.forEach((game) => {
+    game.genres?.forEach((genre) => {
+      if (genre?.id != null && genre?.name) {
+        genresById.set(String(genre.id), genre)
+      }
+    })
+  })
 
-      <div className="catalog-card-info">
-        <div>
-          <h3>{game.title}</h3>
-
-          <p>{game.genre}</p>
-        </div>
-
-        <span className="game-price">
-          {game.price}
-        </span>
-      </div>
-    </article>
+  return [...genresById.values()].sort((first, second) =>
+    first.name.localeCompare(second.name),
   )
 }
 
 function CatalogPage() {
   const [view, setView] = useState('grid')
   const [search, setSearch] = useState('')
-  const [selectedGenre, setSelectedGenre] = useState('All')
+  const [selectedGenre, setSelectedGenre] = useState('all')
+  const { games, genres, loading, error, retry } = useCatalogData({
+    includeGenres: true,
+  })
+
+  const availableGenres = useMemo(
+    () => collectGenres(games, genres),
+    [games, genres],
+  )
 
   const filteredGames = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase()
+
     return games.filter((game) => {
-      const matchesSearch = game.title
+      const matchesSearch = String(game.title ?? '')
         .toLowerCase()
-        .includes(search.toLowerCase())
+        .includes(normalizedSearch)
 
       const matchesGenre =
-        selectedGenre === 'All' ||
-        game.genre === selectedGenre
+        selectedGenre === 'all' ||
+        game.genres?.some(
+          (genre) => String(genre.id) === selectedGenre,
+        )
 
       return matchesSearch && matchesGenre
     })
-  }, [search, selectedGenre])
+  }, [games, search, selectedGenre])
+
+  const resetFilters = () => {
+    setSearch('')
+    setSelectedGenre('all')
+  }
+
+  const gameCountLabel = loading
+    ? 'Loading games…'
+    : `${filteredGames.length} ${filteredGames.length === 1 ? 'game' : 'games'} found`
 
   return (
     <div className="catalog-page">
@@ -124,32 +84,29 @@ function CatalogPage() {
         </p>
       </section>
 
-      <section className="catalog-toolbar">
+      <section className="catalog-toolbar" aria-label="Catalog controls">
         <div className="catalog-search">
           <span className="search-icon" aria-hidden="true">⌕</span>
 
           <input
-            type="text"
+            type="search"
+            aria-label="Search games by title"
             placeholder="Search games..."
             value={search}
-            onChange={(event) =>
-              setSearch(event.target.value)
-            }
+            disabled={loading || Boolean(error)}
+            onChange={(event) => setSearch(event.target.value)}
           />
         </div>
 
         <span className="catalog-count" aria-live="polite">
-          {filteredGames.length} games found
+          {gameCountLabel}
         </span>
 
-        <div className="view-switcher">
+        <div className="view-switcher" aria-label="Catalog view">
           <button
             type="button"
-            className={
-              view === 'grid'
-                ? 'view-button active'
-                : 'view-button'
-            }
+            className={view === 'grid' ? 'view-button active' : 'view-button'}
+            aria-pressed={view === 'grid'}
             onClick={() => setView('grid')}
           >
             Grid
@@ -157,11 +114,8 @@ function CatalogPage() {
 
           <button
             type="button"
-            className={
-              view === 'list'
-                ? 'view-button active'
-                : 'view-button'
-            }
+            className={view === 'list' ? 'view-button active' : 'view-button'}
+            aria-pressed={view === 'list'}
             onClick={() => setView('list')}
           >
             List
@@ -170,16 +124,14 @@ function CatalogPage() {
       </section>
 
       <div className="catalog-layout">
-        <aside className="catalog-filters">
+        <aside className="catalog-filters" aria-label="Catalog filters">
           <div className="filter-heading">
             <span>FILTERS</span>
 
             <button
               type="button"
-              onClick={() => {
-                setSearch('')
-                setSelectedGenre('All')
-              }}
+              disabled={loading || Boolean(error)}
+              onClick={resetFilters}
             >
               Reset
             </button>
@@ -188,65 +140,89 @@ function CatalogPage() {
           <div className="filter-group">
             <h3>Genre</h3>
 
-            {[
-              'All',
-              'RPG',
-              'Action',
-              'Adventure',
-              'MMORPG',
-            ].map((genre) => (
-              <button
-                type="button"
-                key={genre}
-                className={
-                  selectedGenre === genre
-                    ? 'filter-option active'
-                    : 'filter-option'
-                }
-                onClick={() =>
-                  setSelectedGenre(genre)
-                }
-              >
-                <span>{genre}</span>
-
-                {selectedGenre === genre && (
-                  <span>✓</span>
-                )}
-              </button>
-            ))}
-          </div>
-
-          <div className="filter-group">
-            <h3>Price</h3>
-
-            <button type="button" className="filter-option">
-              Under 20$
+            <button
+              type="button"
+              className={
+                selectedGenre === 'all'
+                  ? 'filter-option active'
+                  : 'filter-option'
+              }
+              disabled={loading || Boolean(error)}
+              onClick={() => setSelectedGenre('all')}
+            >
+              <span>All</span>
+              {selectedGenre === 'all' && <span>✓</span>}
             </button>
 
-            <button type="button" className="filter-option">
-              Under 50$
-            </button>
+            {availableGenres.map((genre) => {
+              const genreId = String(genre.id)
+              const isActive = selectedGenre === genreId
 
-            <button type="button" className="filter-option">
-              Premium
-            </button>
-          </div>
+              return (
+                <button
+                  type="button"
+                  key={genre.id}
+                  className={
+                    isActive
+                      ? 'filter-option active'
+                      : 'filter-option'
+                  }
+                  disabled={loading || Boolean(error)}
+                  onClick={() => setSelectedGenre(genreId)}
+                >
+                  <span>{genre.name}</span>
+                  {isActive && <span>✓</span>}
+                </button>
+              )
+            })}
 
-          <div className="filter-group">
-            <h3>Other</h3>
-
-            <button type="button" className="filter-option">
-              Singleplayer
-            </button>
-
-            <button type="button" className="filter-option">
-              Multiplayer
-            </button>
+            {!loading && !error && availableGenres.length === 0 && (
+              <p className="filter-empty-note">
+                No genres available yet.
+              </p>
+            )}
           </div>
         </aside>
 
-        <section className="catalog-results">
-          {filteredGames.length > 0 ? (
+        <section
+          id="catalog-results"
+          className="catalog-results"
+          aria-label="Catalog results"
+        >
+          {loading && (
+            <CatalogFeedback
+              kind="loading"
+              title="Loading catalog"
+              message="Fetching games and genres."
+            />
+          )}
+
+          {error && (
+            <CatalogFeedback
+              kind="error"
+              title="Catalog unavailable"
+              message={error}
+              onRetry={retry}
+            />
+          )}
+
+          {!loading && !error && games.length === 0 && (
+            <CatalogFeedback
+              kind="empty"
+              title="The catalog is empty"
+              message="Games added to Steamn’t will appear here."
+            />
+          )}
+
+          {!loading && !error && games.length > 0 && filteredGames.length === 0 && (
+            <CatalogFeedback
+              kind="empty"
+              title="No games found"
+              message="Try changing your search or genre filter."
+            />
+          )}
+
+          {!loading && !error && filteredGames.length > 0 && (
             <div
               className={
                 view === 'grid'
@@ -255,22 +231,13 @@ function CatalogPage() {
               }
             >
               {filteredGames.map((game) => (
-                <CatalogCard
-                  key={game.title}
+                <GameCard
+                  key={game.id}
                   game={game}
+                  variant="catalog"
                   view={view}
                 />
               ))}
-            </div>
-          ) : (
-            <div className="empty-state">
-              <span>⌕</span>
-
-              <h3>No games found</h3>
-
-              <p>
-                Try changing your search or filters.
-              </p>
             </div>
           )}
         </section>

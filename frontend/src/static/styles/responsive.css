@@ -78,12 +78,12 @@
   }
 
   .game-card-content,
-  .catalog-card-info {
+  .catalog-card .game-card-content {
     min-width: 0;
   }
 
   .game-card-content h3,
-  .catalog-card-info h3,
+  .catalog-card .game-card-content h3,
   .game-cover-title {
     overflow-wrap: anywhere;
   }
@@ -144,7 +144,7 @@
     min-height: 80px;
   }
 
-  .catalog-card.list-view .catalog-card-info {
+  .catalog-card.list-view .game-card-content {
     min-width: 0;
   }
 
@@ -179,5 +179,16 @@
 
   .header-actions {
     grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+
+@media (max-width: 380px) {
+  .catalog-card.list-view .game-card-content {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-card.list-view .game-card-bottom {
+    margin-top: 10px;
   }
 }
