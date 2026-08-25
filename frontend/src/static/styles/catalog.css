@@ -231,7 +231,7 @@
   border-color: rgba(142, 147, 255, 0.35);
 }
 
-.catalog-card-info {
+.catalog-card .game-card-content {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -239,12 +239,12 @@
   padding: 14px;
 }
 
-.catalog-card-info h3 {
+.catalog-card .game-card-content h3 {
   margin: 0;
   font-size: 0.82rem;
 }
 
-.catalog-card-info p {
+.catalog-card .game-card-content p {
   margin: 6px 0 0;
   color: var(--text-muted);
   font-size: 0.68rem;
@@ -270,7 +270,7 @@
   display: none;
 }
 
-.catalog-card.list-view .catalog-card-info {
+.catalog-card.list-view .game-card-content {
   width: 100%;
 }
 
@@ -298,4 +298,43 @@
 .empty-state p {
   margin: 8px 0 0;
   color: var(--text-muted);
+}
+
+
+/* KAN-11 shared card and API state integration */
+.catalog-card .game-card-content {
+  display: block;
+}
+
+.catalog-card.list-view .game-card-content {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+}
+
+.catalog-card.list-view .game-card-bottom {
+  margin-top: 0;
+}
+
+.catalog-card.list-view .game-developer {
+  display: none;
+}
+
+.catalog-results > .catalog-feedback {
+  min-height: 360px;
+}
+
+.filter-heading button:disabled,
+.filter-option:disabled,
+.catalog-search input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.filter-empty-note {
+  margin: 12px 4px 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
 }

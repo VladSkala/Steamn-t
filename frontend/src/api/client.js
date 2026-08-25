@@ -16,6 +16,9 @@ const publicAuthPaths = [
 const isPublicAuthRequest = (url = '') =>
   publicAuthPaths.some((path) => url.includes(path))
 
+const shouldSkipAuth = (config = {}) =>
+  config.skipAuth === true || isPublicAuthRequest(config.url)
+
 export const getAccessToken = () =>
   localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
 
@@ -50,7 +53,7 @@ let refreshPromise = null
 api.interceptors.request.use((config) => {
   const access = getAccessToken()
 
-  if (access && !isPublicAuthRequest(config.url)) {
+  if (access && !shouldSkipAuth(config)) {
     config.headers = config.headers ?? {}
     config.headers.Authorization = `Bearer ${access}`
   }
@@ -67,7 +70,7 @@ api.interceptors.response.use(
       error.response?.status !== 401 ||
       !original ||
       original._retry ||
-      isPublicAuthRequest(original.url)
+      shouldSkipAuth(original)
     ) {
       return Promise.reject(error)
     }
