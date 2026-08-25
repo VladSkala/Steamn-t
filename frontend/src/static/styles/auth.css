@@ -119,3 +119,19 @@
     overflow-wrap: anywhere;
   }
 }
+
+.auth-card-enter { animation: auth-card-in .55s cubic-bezier(.22, 1, .36, 1) both; }
+.auth-form input, .auth-submit, .auth-bottom-text a {
+  transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease, opacity .2s ease;
+}
+.auth-form input:hover { border-color: rgba(135, 139, 255, .32); }
+.auth-form input:focus { transform: translateY(-1px); }
+.auth-submit:hover:not(:disabled) { transform: translateY(-2px); }
+.auth-submit:disabled { cursor: wait; opacity: .72; }
+.auth-bottom-text a:hover { text-shadow: 0 0 18px rgba(112, 117, 255, .55); }
+.route-loader { min-height: 50vh; display: grid; place-items: center; color: var(--text-secondary); animation: auth-pulse 1.2s ease-in-out infinite alternate; }
+@keyframes auth-card-in { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes auth-pulse { from { opacity: .45; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
