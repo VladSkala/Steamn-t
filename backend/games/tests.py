@@ -147,3 +147,143 @@ class CatalogAPITests(APITestCase):
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 2)
+
+
+class CatalogFilteringAPITests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rpg = Genre.objects.create(name="RPG")
+        cls.adventure = Genre.objects.create(name="Adventure")
+        cls.strategy = Genre.objects.create(name="Strategy")
+
+        cls.alpha_game = Game.objects.create(
+            title="Alpha Quest",
+            description="An adventure with role-playing elements.",
+            price=Decimal("30.00"),
+            developer="Alpha Studio",
+            release_date=date(2026, 1, 1),
+        )
+        cls.alpha_game.genres.add(cls.rpg, cls.adventure)
+
+        cls.beta_game = Game.objects.create(
+            title="Beta Quest",
+            description="A compact role-playing quest.",
+            price=Decimal("10.00"),
+            developer="Beta Studio",
+            release_date=date(2026, 2, 1),
+        )
+        cls.beta_game.genres.add(cls.rpg)
+
+        cls.gamma_game = Game.objects.create(
+            title="Gamma Builder",
+            description="A strategy building game.",
+            price=Decimal("20.00"),
+            developer="Gamma Studio",
+            release_date=date(2026, 3, 1),
+        )
+        cls.gamma_game.genres.add(cls.strategy)
+
+        cls.delta_game = Game.objects.create(
+            title="Delta Quest",
+            description="An adventure beyond the horizon.",
+            price=Decimal("40.00"),
+            developer="Delta Studio",
+            release_date=date(2026, 4, 1),
+        )
+        cls.delta_game.genres.add(cls.adventure)
+
+        cls.url = reverse("games:game-list")
+
+    @staticmethod
+    def response_titles(response):
+        return [game["title"] for game in response.data]
+
+    def test_search_matches_title_case_insensitively_and_only_searches_title(self):
+        response = self.client.get(self.url, {"search": "qUeSt"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.response_titles(response),
+            ["Alpha Quest", "Beta Quest", "Delta Quest"],
+        )
+
+        developer_only_response = self.client.get(self.url, {"search": "Studio"})
+
+        self.assertEqual(developer_only_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(developer_only_response.data, [])
+
+    def test_game_list_filters_by_genre_id(self):
+        response = self.client.get(self.url, {"genre": self.rpg.id})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.response_titles(response),
+            ["Alpha Quest", "Beta Quest"],
+        )
+
+    def test_genre_filter_rejects_malformed_or_out_of_range_ids(self):
+        invalid_values = ["not-a-number", "1.5", "0", "-1", str(2**63)]
+
+        for invalid_value in invalid_values:
+            with self.subTest(genre=invalid_value):
+                response = self.client.get(self.url, {"genre": invalid_value})
+
+                self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+                self.assertIn("genre", response.data)
+
+    def test_unknown_genre_id_returns_an_empty_list(self):
+        response = self.client.get(self.url, {"genre": 9_999_999})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data, [])
+
+    def test_game_list_orders_by_price_in_both_directions(self):
+        expectations = {
+            "price": ["Beta Quest", "Gamma Builder", "Alpha Quest", "Delta Quest"],
+            "-price": ["Delta Quest", "Alpha Quest", "Gamma Builder", "Beta Quest"],
+        }
+
+        for ordering, expected_titles in expectations.items():
+            with self.subTest(ordering=ordering):
+                response = self.client.get(self.url, {"ordering": ordering})
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(self.response_titles(response), expected_titles)
+
+    def test_game_list_orders_by_title_in_both_directions(self):
+        expectations = {
+            "title": ["Alpha Quest", "Beta Quest", "Delta Quest", "Gamma Builder"],
+            "-title": ["Gamma Builder", "Delta Quest", "Beta Quest", "Alpha Quest"],
+        }
+
+        for ordering, expected_titles in expectations.items():
+            with self.subTest(ordering=ordering):
+                response = self.client.get(self.url, {"ordering": ordering})
+
+                self.assertEqual(response.status_code, status.HTTP_200_OK)
+                self.assertEqual(self.response_titles(response), expected_titles)
+
+    def test_game_list_combines_search_genre_and_ordering(self):
+        response = self.client.get(
+            self.url,
+            {
+                "search": "quest",
+                "genre": self.rpg.id,
+                "ordering": "-price",
+            },
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.response_titles(response),
+            ["Alpha Quest", "Beta Quest"],
+        )
+
+    def test_unsupported_ordering_falls_back_to_default_title_order(self):
+        response = self.client.get(self.url, {"ordering": "developer"})
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            self.response_titles(response),
+            ["Alpha Quest", "Beta Quest", "Delta Quest", "Gamma Builder"],
+        )
