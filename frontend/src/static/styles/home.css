@@ -142,50 +142,13 @@
   right: -70px;
 }
 
-.hero-castle {
-  position: absolute;
 
-  right: 150px;
-  bottom: 110px;
-
-  width: 260px;
-  height: 220px;
-
-  opacity: 0.5;
-
-  background:
-    linear-gradient(
-      135deg,
-      #080b17,
-      #25163f
-    );
-
-  clip-path:
-    polygon(
-      5% 100%,
-      5% 45%,
-      15% 45%,
-      15% 25%,
-      25% 25%,
-      30% 0,
-      35% 25%,
-      50% 25%,
-      50% 55%,
-      60% 55%,
-      60% 35%,
-      70% 35%,
-      75% 12%,
-      80% 35%,
-      95% 35%,
-      95% 100%
-    );
-}
 
 .hero-content {
   position: relative;
   z-index: 5;
 
-  width: min(760px, 100%);
+  width: min(840px, 100%);
 }
 
 .hero-badge {
@@ -323,70 +286,77 @@
     rgba(174, 159, 255, 0.45);
 }
 
-.hero-side-card {
-  position: absolute;
 
-  z-index: 5;
 
-  right: 50px;
-  bottom: 45px;
 
-  width: 240px;
-
-  padding: 22px;
-
-  border:
-    1px solid rgba(174, 155, 255, 0.18);
-
-  border-radius: 18px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(19, 24, 43, 0.78),
-      rgba(23, 17, 44, 0.7)
-    );
-
-  backdrop-filter: blur(14px);
+.section-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
 }
 
-.side-card-label,
-.section-kicker,
-.profile-card-label {
-  color: #8e9dff;
-
-  font-size: 0.65rem;
-  font-weight: 800;
-
-  letter-spacing: 0.16em;
+.slider-controls {
+  display: flex;
+  gap: 8px;
 }
 
-.hero-side-card strong {
-  display: block;
-
-  margin-top: 12px;
-
-  font-size: 1.1rem;
-  line-height: 1.45;
-}
-
-.side-card-line {
+.slider-button {
   width: 42px;
-  height: 2px;
-
-  margin: 18px 0;
-
-  background:
-    linear-gradient(
-      90deg,
-      var(--blue),
-      var(--purple)
-    );
+  height: 42px;
+  display: inline-grid;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  color: var(--text-primary);
+  font-size: 1.05rem;
+  line-height: 1;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
 }
 
-.side-card-small {
-  color: var(--text-muted);
+.slider-button:hover {
+  transform: translateY(-2px);
+  border-color: rgba(143, 133, 255, 0.5);
+  background: linear-gradient(135deg, rgba(105, 125, 255, 0.16), rgba(154, 90, 255, 0.16));
+}
 
-  font-size: 0.75rem;
-  line-height: 1.6;
+.games-slider {
+  display: flex;
+  gap: 18px;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-behavior: smooth;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  padding-bottom: 6px;
+}
+
+.games-slider::-webkit-scrollbar {
+  display: none;
+}
+
+.games-slider .game-card {
+  flex: 0 0 clamp(240px, 24vw, 310px);
+  scroll-snap-align: start;
+}
+
+@media (max-width: 760px) {
+  .section-heading,
+  .section-actions {
+    align-items: flex-start;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .section-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .games-slider .game-card {
+    flex-basis: min(82vw, 320px);
+  }
 }

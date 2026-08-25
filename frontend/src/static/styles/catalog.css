@@ -1,16 +1,15 @@
+/* Catalog layout */
 .catalog-page {
   padding: 42px 0 72px;
 }
 
 .catalog-hero {
   max-width: 700px;
-
   margin-bottom: 34px;
 }
 
 .catalog-hero h1 {
   margin: 12px 0 0;
-
   font-size: clamp(2.5rem, 5vw, 4.5rem);
   line-height: 1;
   letter-spacing: -0.06em;
@@ -18,151 +17,150 @@
 
 .catalog-hero p {
   margin: 20px 0 0;
-
   color: var(--text-secondary);
-
   line-height: 1.7;
 }
 
+/* Search and view controls */
 .catalog-toolbar {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-
   gap: 18px;
-
+  min-height: 64px;
   margin-bottom: 28px;
+  padding: 6px;
+  border: 1px solid rgba(132, 148, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(12, 16, 29, 0.42);
 }
 
 .catalog-search {
   flex: 1;
-
-  max-width: 600px;
-
+  min-width: 0;
+  min-height: 52px;
   display: flex;
   align-items: center;
   gap: 10px;
-
   padding: 0 16px;
-
   border: 1px solid var(--border);
-  border-radius: 12px;
-
-  background: rgba(18, 23, 39, 0.75);
+  border-radius: 11px;
+  background: rgba(18, 23, 39, 0.82);
 }
 
-.catalog-search span {
+.catalog-search:focus-within {
+  border-color: rgba(135, 139, 255, 0.48);
+  box-shadow: 0 0 0 4px rgba(112, 117, 255, 0.08);
+}
+
+.search-icon {
+  width: 20px;
+  flex: 0 0 20px;
+  display: grid;
+  place-items: center;
   color: var(--text-muted);
+  font-size: 1rem;
 }
 
 .catalog-search input {
   width: 100%;
-  height: 50px;
-
+  height: 52px;
   border: 0;
   outline: 0;
-
   background: transparent;
-
   color: var(--text-primary);
+  font-size: 0.94rem;
 }
 
 .catalog-search input::placeholder {
   color: var(--text-muted);
 }
 
+.catalog-count {
+  flex: 0 0 auto;
+  color: var(--text-secondary);
+  font-size: 1rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
 .view-switcher {
+  flex: 0 0 auto;
   display: flex;
   gap: 6px;
-
   padding: 5px;
-
   border: 1px solid var(--border);
   border-radius: 12px;
-
   background: rgba(255, 255, 255, 0.025);
 }
 
 .view-button {
   padding: 10px 14px;
-
   border: 0;
   border-radius: 8px;
-
   background: transparent;
-
   color: var(--text-muted);
-
   font-size: 0.78rem;
   font-weight: 800;
 }
 
 .view-button.active {
-  background:
-    linear-gradient(
-      135deg,
-      rgba(105, 125, 255, 0.28),
-      rgba(157, 86, 234, 0.25)
-    );
-
+  background: linear-gradient(
+    135deg,
+    rgba(105, 125, 255, 0.28),
+    rgba(157, 86, 234, 0.25)
+  );
   color: var(--text-primary);
 }
 
+/* Filters and results start on the same line */
 .catalog-layout {
   display: grid;
-
   grid-template-columns: 240px minmax(0, 1fr);
-
+  align-items: start;
   gap: 34px;
 }
 
-.catalog-filters {
+.catalog-filters,
+.catalog-results {
+  min-width: 0;
   align-self: start;
+}
 
+.catalog-filters {
   padding: 20px;
-
   border: 1px solid var(--border);
   border-radius: 18px;
-
-  background:
-    linear-gradient(
-      145deg,
-      rgba(20, 26, 44, 0.88),
-      rgba(11, 16, 29, 0.8)
-    );
+  background: linear-gradient(
+    145deg,
+    rgba(20, 26, 44, 0.88),
+    rgba(11, 16, 29, 0.8)
+  );
 }
 
 .filter-heading {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-
+  justify-content: space-between;
   padding-bottom: 18px;
-
   border-bottom: 1px solid var(--border);
 }
 
 .filter-heading span {
   font-size: 0.72rem;
   font-weight: 900;
-
   letter-spacing: 0.12em;
 }
 
 .filter-heading button {
   border: 0;
-
   background: transparent;
-
   color: var(--blue-bright);
-
   font-size: 0.7rem;
   font-weight: 700;
 }
 
 .filter-group {
   padding: 20px 0;
-
   border-bottom: 1px solid var(--border);
 }
 
@@ -172,137 +170,95 @@
 
 .filter-group h3 {
   margin: 0 0 12px;
-
   color: var(--text-secondary);
-
   font-size: 0.78rem;
 }
 
 .filter-option {
   width: 100%;
-
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   margin-top: 7px;
   padding: 10px 11px;
-
-  border:
-    1px solid transparent;
-
+  border: 1px solid transparent;
   border-radius: 9px;
-
   background: transparent;
-
   color: var(--text-muted);
-
   text-align: left;
-
   font-size: 0.75rem;
-
   transition: 0.2s ease;
 }
 
 .filter-option:hover {
-  background:
-    rgba(115, 129, 255, 0.07);
-
+  background: rgba(115, 129, 255, 0.07);
   color: var(--text-primary);
 }
 
 .filter-option.active {
-  border-color:
-    rgba(122, 138, 255, 0.2);
-
-  background:
-    linear-gradient(
-      135deg,
-      rgba(91, 116, 255, 0.14),
-      rgba(151, 77, 234, 0.12)
-    );
-
+  border-color: rgba(122, 138, 255, 0.2);
+  background: linear-gradient(
+    135deg,
+    rgba(91, 116, 255, 0.14),
+    rgba(151, 77, 234, 0.12)
+  );
   color: var(--blue-bright);
 }
 
-.catalog-results-heading {
-  display: flex;
-  justify-content: space-between;
-
-  margin-bottom: 22px;
-}
-
+/* Games */
 .catalog-games-grid {
   display: grid;
-
-  grid-template-columns:
-    repeat(3, minmax(0, 1fr));
-
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 16px;
+}
+
+.catalog-games-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .catalog-card {
   overflow: hidden;
-
   border: 1px solid var(--border);
   border-radius: 14px;
-
   background: var(--bg-card);
-
-  transition:
-    transform 0.2s ease,
-    border-color 0.2s ease;
+  transition: transform 0.2s ease, border-color 0.2s ease;
 }
 
 .catalog-card:hover {
   transform: translateY(-4px);
-
-  border-color:
-    rgba(142, 147, 255, 0.35);
+  border-color: rgba(142, 147, 255, 0.35);
 }
 
 .catalog-card-info {
   display: flex;
   align-items: center;
   justify-content: space-between;
-
   gap: 14px;
-
   padding: 14px;
 }
 
 .catalog-card-info h3 {
   margin: 0;
-
   font-size: 0.82rem;
 }
 
 .catalog-card-info p {
   margin: 6px 0 0;
-
   color: var(--text-muted);
-
   font-size: 0.68rem;
-}
-
-.catalog-games-list {
-  display: flex;
-  flex-direction: column;
-
-  gap: 10px;
 }
 
 .catalog-card.list-view {
   display: flex;
   align-items: center;
-
   min-height: 95px;
 }
 
 .catalog-card.list-view .game-cover {
   width: 180px;
   min-height: 95px;
-
   flex-shrink: 0;
 }
 
@@ -318,24 +274,21 @@
   width: 100%;
 }
 
+/* Empty state */
 .empty-state {
   min-height: 360px;
-
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-
   border: 1px dashed var(--border);
   border-radius: 18px;
-
   text-align: center;
 }
 
 .empty-state > span {
-  font-size: 2rem;
-
   color: var(--purple-bright);
+  font-size: 2rem;
 }
 
 .empty-state h3 {
@@ -344,6 +297,5 @@
 
 .empty-state p {
   margin: 8px 0 0;
-
   color: var(--text-muted);
 }

@@ -9,10 +9,6 @@ function Footer() {
             Steam<span>n</span>’t
           </p>
 
-          <p className="footer-description">
-            Discover new worlds, keep your library organized
-            and find your next favorite game.
-          </p>
         </div>
 
         <div className="footer-links">

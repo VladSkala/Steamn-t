@@ -18,13 +18,7 @@
   margin: 0;
 }
 
-.footer-description {
-  max-width: 380px;
-  margin: 8px 0 0;
-  color: var(--text-muted);
-  font-size: 0.72rem;
-  line-height: 1.6;
-}
+
 
 .footer-links {
   display: flex;
