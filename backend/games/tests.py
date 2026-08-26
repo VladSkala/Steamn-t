@@ -287,3 +287,135 @@ class CatalogFilteringAPITests(APITestCase):
             self.response_titles(response),
             ["Alpha Quest", "Beta Quest", "Delta Quest", "Gamma Builder"],
         )
+
+
+class GameDetailAPITests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.rpg = Genre.objects.create(name="Detail RPG")
+        cls.adventure = Genre.objects.create(name="Detail Adventure")
+        cls.game = Game.objects.create(
+            title="Detail Quest",
+            description="A complete game used to verify the detail API.",
+            price=Decimal("49.90"),
+            cover="games/covers/2026/08/detail-quest.webp",
+            developer="Detail Studio",
+            release_date=date(2026, 8, 26),
+            requirements=(
+                "Minimum: 8 GB RAM, GTX 1060.\n"
+                "Recommended: 16 GB RAM, RTX 3060."
+            ),
+        )
+        cls.game.genres.add(cls.rpg, cls.adventure)
+        cls.url = reverse("games:game-detail", kwargs={"pk": cls.game.pk})
+
+        cls.game_without_optional_content = Game.objects.create(
+            title="Bare Details",
+            description="A game without a cover or requirements.",
+            price=Decimal("0.00"),
+            developer="Bare Studio",
+            release_date=date(2025, 1, 1),
+            requirements="",
+        )
+        cls.game_without_optional_content_url = reverse(
+            "games:game-detail",
+            kwargs={"pk": cls.game_without_optional_content.pk},
+        )
+
+    def test_game_detail_is_public_and_has_expected_shape(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            set(response.data),
+            {
+                "id",
+                "title",
+                "description",
+                "price",
+                "cover",
+                "developer",
+                "release_date",
+                "requirements",
+                "genres",
+            },
+        )
+
+    def test_game_detail_returns_full_values_and_nested_genres(self):
+        response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], self.game.pk)
+        self.assertEqual(response.data["title"], "Detail Quest")
+        self.assertEqual(
+            response.data["description"],
+            "A complete game used to verify the detail API.",
+        )
+        self.assertEqual(response.data["price"], "49.90")
+        self.assertEqual(response.data["developer"], "Detail Studio")
+        self.assertEqual(response.data["release_date"], "2026-08-26")
+        self.assertEqual(
+            response.data["requirements"],
+            "Minimum: 8 GB RAM, GTX 1060.\n"
+            "Recommended: 16 GB RAM, RTX 3060.",
+        )
+        self.assertEqual(
+            response.data["genres"],
+            [
+                {"id": self.adventure.pk, "name": "Detail Adventure"},
+                {"id": self.rpg.pk, "name": "Detail RPG"},
+            ],
+        )
+
+    def test_game_detail_returns_absolute_or_null_cover_urls(self):
+        response = self.client.get(self.url)
+        response_without_cover = self.client.get(
+            self.game_without_optional_content_url,
+        )
+
+        self.assertEqual(
+            response.data["cover"],
+            "http://testserver/media/games/covers/2026/08/detail-quest.webp",
+        )
+        self.assertIsNone(response_without_cover.data["cover"])
+
+    def test_game_detail_allows_blank_requirements(self):
+        response = self.client.get(self.game_without_optional_content_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["requirements"], "")
+        self.assertEqual(response.data["price"], "0.00")
+
+    def test_game_detail_returns_404_for_unknown_game(self):
+        missing_url = reverse("games:game-detail", kwargs={"pk": 999_999})
+
+        response = self.client.get(missing_url)
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertIn("detail", response.data)
+
+    def test_game_detail_rejects_write_methods(self):
+        for method_name in ("post", "put", "patch", "delete"):
+            with self.subTest(method=method_name):
+                method = getattr(self.client, method_name)
+                response = method(self.url, {}, format="json")
+
+                self.assertEqual(
+                    response.status_code,
+                    status.HTTP_405_METHOD_NOT_ALLOWED,
+                )
+
+    def test_game_detail_prefetches_genres(self):
+        with self.assertNumQueries(2):
+            response = self.client.get(self.url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(len(response.data["genres"]), 2)
+
+    def test_game_detail_supports_head_and_options(self):
+        head_response = self.client.head(self.url)
+        options_response = self.client.options(self.url)
+
+        self.assertEqual(head_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(options_response.status_code, status.HTTP_200_OK)
+        self.assertEqual(options_response["Allow"], "GET, HEAD, OPTIONS")

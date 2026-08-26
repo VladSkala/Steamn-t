@@ -44,3 +44,21 @@ class GameListSerializer(serializers.ModelSerializer):
             return cover_url
 
         return request.build_absolute_uri(cover_url)
+
+
+class GameDetailSerializer(GameListSerializer):
+    """Complete read-only representation used by the game detail endpoint."""
+
+    class Meta(GameListSerializer.Meta):
+        fields = (
+            "id",
+            "title",
+            "description",
+            "price",
+            "cover",
+            "developer",
+            "release_date",
+            "requirements",
+            "genres",
+        )
+        read_only_fields = fields
