@@ -66,6 +66,15 @@
     align-self: center;
   }
 
+  .catalog-sort {
+    flex: 1;
+  }
+
+  .sort-select-control {
+    flex: 1;
+    width: auto;
+  }
+
   .catalog-layout {
     grid-template-columns: minmax(0, 1fr);
     gap: 22px;
@@ -137,6 +146,32 @@
 
   .catalog-hero h1 {
     line-height: 1.05;
+  }
+
+  .catalog-toolbar {
+    gap: 10px;
+    padding: 5px;
+  }
+
+  .catalog-sort {
+    width: 100%;
+    flex-basis: 100%;
+  }
+
+  .sort-select-control {
+    min-width: 0;
+    width: auto;
+  }
+
+  .catalog-count {
+    order: 3;
+    width: 100%;
+    flex-basis: 100%;
+    padding: 4px 8px 0;
+  }
+
+  .view-switcher {
+    order: 2;
   }
 
   .catalog-card.list-view .game-cover {
