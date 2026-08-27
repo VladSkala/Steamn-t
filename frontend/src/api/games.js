@@ -28,3 +28,12 @@ export const getGenres = async ({ signal } = {}) => {
   const { data } = await api.get('/genres/', { signal, skipAuth: true })
   return normalizeCollection(data, 'genres')
 }
+
+
+export const getGameById = async (id, { signal } = {}) => {
+  const { data } = await api.get(`/games/${id}/`, {
+    signal,
+    skipAuth: true,
+  })
+  return data
+}
