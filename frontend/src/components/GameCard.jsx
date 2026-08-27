@@ -1,3 +1,5 @@
+import { Link } from 'react-router-dom'
+
 const fallbackStyles = [
   'ember',
   'forest',
@@ -76,6 +78,7 @@ function GameCard({ game, variant = 'home', view = 'grid' }) {
   ].filter(Boolean).join(' ')
 
   return (
+    <Link to={`/games/${game.id}`} className="game-card-link" aria-label={`Open ${title}`} >
     <article className={cardClasses}>
       <div className={`game-cover game-cover-${fallbackStyle}`}>
         {game?.cover && (
@@ -119,6 +122,7 @@ function GameCard({ game, variant = 'home', view = 'grid' }) {
         </div>
       </div>
     </article>
+    </Link>
   )
 }
 

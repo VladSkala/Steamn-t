@@ -5,6 +5,7 @@ import AuthLayout from './layouts/AuthLayout'
 import GlobalLayout from './layouts/GlobalLayout'
 import CatalogPage from './pages/CatalogPage'
 import HomePage from './pages/HomePage'
+import GameDetailsPage from './pages/GameDetailsPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
@@ -17,6 +18,7 @@ function App() {
       <Route element={<GlobalLayout />}>
         <Route index element={<HomePage />} />
         <Route path="catalog" element={<CatalogPage />} />
+        <Route path="games/:gameId" element={<GameDetailsPage />} />
 
         <Route
           path="profile"
