@@ -24,9 +24,20 @@ const formatPrice = (price) => {
 }
 
 function CartPage() {
-  const { cart, isLoading, error, removeFromCart } = useCart()
+  const {
+    cart,
+    isLoading,
+    error,
+    removeFromCart,
+    refreshCart,
+  } = useCart()
   const [removingGameId, setRemovingGameId] = useState(null)
   const [actionError, setActionError] = useState('')
+
+  const handleRetry = () => {
+    setActionError('')
+    refreshCart().catch(() => {})
+  }
 
   const handleRemove = async (gameId) => {
     setRemovingGameId(gameId)
@@ -63,6 +74,7 @@ function CartPage() {
           kind="error"
           title="Cart unavailable"
           message={error}
+          onRetry={handleRetry}
         />
         <Link className="cart-secondary-link" to="/catalog">
           Back to catalog
@@ -77,7 +89,7 @@ function CartPage() {
     return (
       <div className="cart-page">
         <section className="cart-empty-state">
-          
+          <div className="cart-empty-icon" aria-hidden="true">🛒</div>
           <h1>Your cart is empty.</h1>
           <p>Browse the catalog and add games you want to keep for later.</p>
           <Link className="primary-button" to="/catalog">
@@ -95,7 +107,9 @@ function CartPage() {
         <div>
           <span className="section-kicker">YOUR CART</span>
           <h1>Ready to check out?</h1>
-          <p>{items.length} {items.length === 1 ? 'game' : 'games'} in your cart.</p>
+          <p>
+            {items.length} {items.length === 1 ? 'game' : 'games'} in your cart.
+          </p>
         </div>
         <Link className="cart-secondary-link" to="/catalog">
           Continue shopping
@@ -104,9 +118,10 @@ function CartPage() {
       </section>
 
       {(error || actionError) && (
-        <p className="cart-inline-error" role="alert">
-          {actionError || error}
-        </p>
+        <div className="cart-inline-error" role="alert">
+          <span>{actionError || error}</span>
+          <button type="button" onClick={handleRetry}>Retry</button>
+        </div>
       )}
 
       <div className="cart-layout">
@@ -119,11 +134,20 @@ function CartPage() {
 
             return (
               <article className="cart-item" key={item.id}>
-                <Link className="cart-item-cover" to={`/games/${gameId}`}>
-                  {game?.cover ? (
-                    <img src={game.cover} alt="" onError={(event) => { event.currentTarget.hidden = true }} />
-                  ) : (
-                    <span aria-hidden="true">S</span>
+                <Link
+                  className="cart-item-cover"
+                  to={`/games/${gameId}`}
+                  aria-label={`Open ${title}`}
+                >
+                  <span className="cart-item-cover-fallback" aria-hidden="true">S</span>
+                  {game?.cover && (
+                    <img
+                      src={game.cover}
+                      alt=""
+                      onError={(event) => {
+                        event.currentTarget.hidden = true
+                      }}
+                    />
                   )}
                 </Link>
 
@@ -135,12 +159,14 @@ function CartPage() {
                   <span className="cart-item-quantity">1 copy</span>
                 </div>
 
-                <strong className="cart-item-price">{formatPrice(game?.price)}</strong>
+                <strong className="cart-item-price">
+                  {formatPrice(game?.price)}
+                </strong>
 
                 <button
                   type="button"
                   className="cart-remove-button"
-                  disabled={removing}
+                  disabled={removingGameId !== null}
                   onClick={() => handleRemove(gameId)}
                 >
                   {removing ? 'Removing…' : 'Remove'}
@@ -160,7 +186,11 @@ function CartPage() {
             <span>Total</span>
             <strong>{formatPrice(cart?.total)}</strong>
           </div>
-          <button type="button" className="primary-button cart-checkout-button" disabled>
+          <button
+            type="button"
+            className="primary-button cart-checkout-button"
+            disabled
+          >
             Checkout
           </button>
           <p>Checkout will be available when the store order flow is connected.</p>
