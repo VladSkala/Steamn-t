@@ -1,108 +1,187 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+
 import { addCartItem, getCart, removeCartItem } from '../api/cart'
-import { CartContext } from './CartContextValue'
 import { useAuth } from '../hooks/useAuth'
+import { CartContext } from './CartContextValue'
 
-const getCartItemCount = (cart) => (Array.isArray(cart?.items) ? cart.items.length : 0)
-
-async function loadCart({
-  setCart,
-  setError,
-  setIsLoading,
-  isActive,
-}) {
-  setIsLoading(true)
-  setError('')
-
-  try {
-    const nextCart = await getCart()
-
-    if (isActive()) {
-      setCart(nextCart)
-    }
-
-    return nextCart
-  } catch (requestError) {
-    if (isActive()) {
-      setError(
-        requestError.response?.data?.detail ||
-          'Unable to load your cart right now.',
-      )
-    }
-
-    throw requestError
-  } finally {
-    if (isActive()) {
-      setIsLoading(false)
-    }
-  }
+const EMPTY_CART_STATE = {
+  ownerId: null,
+  cart: null,
+  error: '',
+  isLoading: false,
 }
 
+const getCartItemCount = (cart) =>
+  Array.isArray(cart?.items) ? cart.items.length : 0
+
+const getCartError = (requestError) =>
+  requestError.response?.data?.detail ||
+  requestError.message ||
+  'Unable to load your cart right now.'
+
+const isCanceledRequest = (requestError) =>
+  requestError?.code === 'ERR_CANCELED' ||
+  requestError?.name === 'CanceledError' ||
+  requestError?.name === 'AbortError'
+
 function CartProvider({ children }) {
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
-  const [cart, setCart] = useState(null)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState('')
-
-  const refreshCart = useCallback(async () => {
-    if (!isAuthenticated) {
-      return null
-    }
-
-    return loadCart({
-      setCart,
-      setError,
-      setIsLoading,
-      isActive: () => true,
-    })
-  }, [isAuthenticated])
+  const {
+    user,
+    isAuthenticated,
+    isLoading: authLoading,
+  } = useAuth()
+  const userId =
+    isAuthenticated && user?.id != null ? String(user.id) : null
+  const [cartState, setCartState] = useState(EMPTY_CART_STATE)
+  const requestGeneration = useRef(0)
 
   useEffect(() => {
-    if (authLoading || !isAuthenticated) {
+    requestGeneration.current += 1
+    const generation = requestGeneration.current
+
+    if (authLoading || !userId) {
       return undefined
     }
 
     let active = true
+    const controller = new AbortController()
 
-    loadCart({
-      setCart,
-      setError,
-      setIsLoading,
-      isActive: () => active,
-    }).catch(() => {})
+    getCart({ signal: controller.signal })
+      .then((nextCart) => {
+        if (active && requestGeneration.current === generation) {
+          setCartState({
+            ownerId: userId,
+            cart: nextCart,
+            error: '',
+            isLoading: false,
+          })
+        }
+      })
+      .catch((requestError) => {
+        if (
+          active &&
+          requestGeneration.current === generation &&
+          !isCanceledRequest(requestError)
+        ) {
+          setCartState({
+            ownerId: userId,
+            cart: null,
+            error: getCartError(requestError),
+            isLoading: false,
+          })
+        }
+      })
 
     return () => {
       active = false
+      controller.abort()
     }
-  }, [authLoading, isAuthenticated])
+  }, [authLoading, userId])
+
+  const refreshCart = useCallback(async () => {
+    if (!userId) {
+      return null
+    }
+
+    const generation = requestGeneration.current
+
+    setCartState((previous) => ({
+      ownerId: userId,
+      cart: previous.ownerId === userId ? previous.cart : null,
+      error: '',
+      isLoading: true,
+    }))
+
+    try {
+      const nextCart = await getCart()
+
+      if (requestGeneration.current === generation) {
+        setCartState({
+          ownerId: userId,
+          cart: nextCart,
+          error: '',
+          isLoading: false,
+        })
+      }
+
+      return nextCart
+    } catch (requestError) {
+      if (requestGeneration.current === generation) {
+        setCartState((previous) => ({
+          ownerId: userId,
+          cart: previous.ownerId === userId ? previous.cart : null,
+          error: getCartError(requestError),
+          isLoading: false,
+        }))
+      }
+
+      throw requestError
+    }
+  }, [userId])
 
   const addToCart = useCallback(async (gameId) => {
+    if (!userId) {
+      throw new Error('Sign in before adding a game to your cart.')
+    }
+
+    const generation = requestGeneration.current
     const nextCart = await addCartItem(gameId)
-    setCart(nextCart)
-    setError('')
+
+    if (requestGeneration.current === generation) {
+      setCartState({
+        ownerId: userId,
+        cart: nextCart,
+        error: '',
+        isLoading: false,
+      })
+    }
+
     return nextCart
-  }, [])
+  }, [userId])
 
   const removeFromCart = useCallback(async (gameId) => {
+    if (!userId) {
+      throw new Error('Sign in before changing your cart.')
+    }
+
+    const generation = requestGeneration.current
     await removeCartItem(gameId)
-    await refreshCart()
-  }, [refreshCart])
+
+    if (requestGeneration.current !== generation) {
+      return null
+    }
+
+    return refreshCart()
+  }, [refreshCart, userId])
+
+  const ownsCartState = Boolean(
+    userId && cartState.ownerId === userId,
+  )
+  const visibleCart = ownsCartState ? cartState.cart : null
+  const visibleError = ownsCartState ? cartState.error : ''
+  const isLoading = Boolean(userId) && (
+    authLoading ||
+    !ownsCartState ||
+    cartState.isLoading
+  )
 
   const isInCart = useCallback(
     (gameId) =>
-      Array.isArray(cart?.items) &&
-      cart.items.some((item) => String(item.game?.id) === String(gameId)),
-    [cart],
+      Array.isArray(visibleCart?.items) &&
+      visibleCart.items.some(
+        (item) => String(item.game?.id) === String(gameId),
+      ),
+    [visibleCart],
   )
 
-  const visibleCart = isAuthenticated ? cart : null
+  const itemCount = getCartItemCount(visibleCart)
 
   const value = useMemo(
     () => ({
       cart: visibleCart,
-      itemCount: getCartItemCount(visibleCart),
+      itemCount,
       isLoading,
-      error: isAuthenticated ? error : '',
+      error: visibleError,
       addToCart,
       removeFromCart,
       refreshCart,
@@ -110,9 +189,9 @@ function CartProvider({ children }) {
     }),
     [
       visibleCart,
+      itemCount,
       isLoading,
-      error,
-      isAuthenticated,
+      visibleError,
       addToCart,
       removeFromCart,
       refreshCart,
