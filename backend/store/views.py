@@ -5,8 +5,23 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from store.models import Cart, CartItem
-from store.serializers import CartItemCreateSerializer, CartSerializer
+from store.models import Cart, CartItem, Order, OrderItem
+from store.serializers import (
+    CartItemCreateSerializer,
+    CartSerializer,
+    OrderSerializer,
+)
+from store.services import (
+    AlreadyOwnedGamesError,
+    EmptyCartError,
+    checkout_user_cart,
+)
+
+
+EMPTY_CART_MESSAGE = "Your cart is empty."
+ALREADY_OWNED_MESSAGE = (
+    "Remove already owned games from your cart before checkout."
+)
 
 
 def get_cart_queryset():
@@ -18,6 +33,18 @@ def get_cart_queryset():
     )
     return Cart.objects.prefetch_related(
         Prefetch("items", queryset=cart_items),
+    )
+
+
+def get_order_queryset():
+    """Return orders with their immutable item prices and games prefetched."""
+
+    order_items = OrderItem.objects.select_related("game").order_by(
+        "created_at",
+        "pk",
+    )
+    return Order.objects.prefetch_related(
+        Prefetch("items", queryset=order_items),
     )
 
 
@@ -84,3 +111,38 @@ class CartItemDeleteView(APIView):
         )
         cart_item.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class CheckoutView(APIView):
+    """Complete one authenticated user's cart as an atomic demo purchase."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request):
+        try:
+            order = checkout_user_cart(request.user)
+        except EmptyCartError:
+            return Response(
+                {
+                    "code": "empty_cart",
+                    "detail": EMPTY_CART_MESSAGE,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except AlreadyOwnedGamesError as error:
+            return Response(
+                {
+                    "code": "already_owned",
+                    "detail": ALREADY_OWNED_MESSAGE,
+                    "game_ids": list(error.game_ids),
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        loaded_order = get_order_queryset().get(pk=order.pk)
+        serializer = OrderSerializer(
+            loaded_order,
+            context={"request": request},
+        )
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

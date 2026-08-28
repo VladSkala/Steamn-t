@@ -1,6 +1,11 @@
 from django.urls import path
 
-from store.views import CartItemCreateView, CartItemDeleteView, CartView
+from store.views import (
+    CartItemCreateView,
+    CartItemDeleteView,
+    CartView,
+    CheckoutView,
+)
 
 
 app_name = "store"
@@ -12,5 +17,10 @@ urlpatterns = [
         "cart/items/<int:game_id>/",
         CartItemDeleteView.as_view(),
         name="cart-item-delete",
+    ),
+    path(
+        "orders/checkout/",
+        CheckoutView.as_view(),
+        name="order-checkout",
     ),
 ]

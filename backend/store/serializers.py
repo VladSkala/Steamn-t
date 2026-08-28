@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 
 from games.models import Game
-from store.models import Cart, CartItem
+from store.models import Cart, CartItem, Order, OrderItem
 
 
 DUPLICATE_GAME_MESSAGE = "This game is already in your cart."
@@ -93,3 +93,47 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError(
                 {"game_id": DUPLICATE_GAME_MESSAGE},
             ) from error
+
+
+class OrderGameSerializer(serializers.ModelSerializer):
+    """Stable game identity displayed inside a completed order."""
+
+    cover = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Game
+        fields = ("id", "title", "cover", "developer")
+        read_only_fields = fields
+
+    def get_cover(self, game: Game) -> str | None:
+        if not game.cover:
+            return None
+
+        cover_url = game.cover.url
+        request = self.context.get("request")
+        if request is None:
+            return cover_url
+
+        return request.build_absolute_uri(cover_url)
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    """Purchased game with the price frozen at checkout time."""
+
+    game = OrderGameSerializer(read_only=True)
+
+    class Meta:
+        model = OrderItem
+        fields = ("id", "game", "price_at_purchase")
+        read_only_fields = fields
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    """Read-only representation returned after a successful checkout."""
+
+    items = OrderItemSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ("id", "status", "total_price", "items", "created_at")
+        read_only_fields = fields
