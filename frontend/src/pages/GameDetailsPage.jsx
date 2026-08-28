@@ -1,8 +1,10 @@
 import { useState } from 'react'
-import { Link, useParams } from 'react-router-dom'
+import { Link, useLocation, useParams } from 'react-router-dom'
 
 import CatalogFeedback from '../components/CatalogFeedback'
 import useGameDetails from '../hooks/useGameDetails'
+import { useAuth } from '../hooks/useAuth'
+import { useCart } from '../hooks/useCart'
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -39,6 +41,71 @@ const normalizeRequirements = (requirements) => {
         value: rest.length ? rest.join(':').trim() : line,
       }
     })
+}
+
+function CartActionButton({ gameId, variant = 'primary' }) {
+  const location = useLocation()
+  const { isAuthenticated } = useAuth()
+  const { addToCart, isInCart } = useCart()
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  if (!isAuthenticated) {
+    return (
+      <Link
+        className={`details-button details-button-${variant}`}
+        to="/login"
+        state={{ from: location }}
+      >
+        Sign in to add
+      </Link>
+    )
+  }
+
+  if (isInCart(gameId)) {
+    return (
+      <div className="details-cart-action">
+        <Link
+          className={`details-button details-button-${variant} details-button-in-cart`}
+          to="/cart"
+        >
+          <span className="details-cart-check" aria-hidden="true">✓</span>
+          <span>In cart · View</span>
+        </Link>
+      </div>
+    )
+  }
+
+  const handleAdd = async () => {
+    setLoading(true)
+    setError('')
+
+    try {
+      await addToCart(gameId)
+    } catch (requestError) {
+      setError(
+        requestError.response?.data?.game_id?.[0] ||
+        requestError.response?.data?.detail ||
+        'Unable to add this game to your cart.',
+      )
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div className="details-cart-action">
+      <button
+        type="button"
+        className={`details-button details-button-${variant}`}
+        disabled={loading}
+        onClick={handleAdd}
+      >
+        {loading ? 'Adding…' : 'Add to cart'}
+      </button>
+      {error && <span className="details-cart-error" role="alert">{error}</span>}
+    </div>
+  )
 }
 
 function GameDetailsPage() {
@@ -177,9 +244,7 @@ function GameDetailsPage() {
             <p>{description}</p>
             <div>
               <strong>{formatPrice(game?.price)}</strong>
-              <button type="button" className="details-button details-button-primary">
-                Add to cart
-              </button>
+              <CartActionButton gameId={game?.id} />
             </div>
           </article>
         </section>
@@ -253,7 +318,7 @@ function GameDetailsPage() {
             Buy now
           </button>
           <div className="sidebar-action-row">
-            <button type="button">Add to cart</button>
+            <CartActionButton gameId={game?.id} variant="secondary" />
             <button type="button" aria-label="Add to wishlist">♡</button>
           </div>
           <div className="sidebar-links">

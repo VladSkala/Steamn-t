@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useCart } from '../hooks/useCart'
 
 const navigationItems = [
   { label: 'Home', to: '/' },
@@ -10,6 +11,7 @@ const navigationItems = [
 function Header() {
   const [menuOpen, setMenuOpen] = useState(false)
   const { isAuthenticated, logout } = useAuth()
+  const { itemCount } = useCart()
   const headerRef = useRef(null)
 
   const closeMenu = () => setMenuOpen(false)
@@ -87,6 +89,18 @@ function Header() {
           </nav>
 
           <div className="header-actions">
+            <Link to="/cart" className="cart-header-link" onClick={closeMenu} aria-label={`Cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}>
+              <span className="cart-header-icon" aria-hidden="true">
+                <svg viewBox="0 0 24 24" focusable="false">
+                  <path d="M3.5 4h2l1.7 10.1a2 2 0 0 0 2 1.7h7.9a2 2 0 0 0 1.9-1.3L21 7H7" />
+                  <path d="M9.4 18.8h.1M17.2 18.8h.1" />
+                </svg>
+              </span>
+              <span>Cart</span>
+              {isAuthenticated && itemCount > 0 && (
+                <b className="cart-header-count">{itemCount}</b>
+              )}
+            </Link>
             {isAuthenticated ? (
               <>
                 <Link to="/profile" className="login-button" onClick={closeMenu}>Profile</Link>
