@@ -46,6 +46,8 @@
 }
 
 .game-card {
+  width: 100%;
+  min-width: 0;
   overflow: hidden;
 
   border: 1px solid var(--border);
