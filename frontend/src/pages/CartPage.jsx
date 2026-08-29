@@ -186,14 +186,11 @@ function CartPage() {
             <span>Total</span>
             <strong>{formatPrice(cart?.total)}</strong>
           </div>
-          <button
-            type="button"
-            className="primary-button cart-checkout-button"
-            disabled
-          >
+          <Link className="primary-button cart-checkout-button" to="/checkout">
             Checkout
-          </button>
-          <p>Checkout will be available when the store order flow is connected.</p>
+            <span>→</span>
+          </Link>
+          <p>Demo checkout only. No real payment is processed.</p>
         </aside>
       </div>
     </div>

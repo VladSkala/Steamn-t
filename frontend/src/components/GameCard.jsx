@@ -66,7 +66,7 @@ const hideBrokenCover = (event) => {
   event.currentTarget.hidden = true
 }
 
-function GameCard({ game, variant = 'home', view = 'grid' }) {
+function GameCard({ game, variant = 'home', view = 'grid', isOwned = false }) {
   const title = game?.title?.trim() || 'Untitled game'
   const genreLabel = getGenreLabel(game?.genres)
   const developer = game?.developer?.trim() || 'Steamn’t catalog'
@@ -101,6 +101,12 @@ function GameCard({ game, variant = 'home', view = 'grid' }) {
         <span className="game-cover-title">
           {title}
         </span>
+
+        {isOwned && (
+          <span className="game-library-badge" aria-label="Already in your library">
+            ✓ In Library
+          </span>
+        )}
       </div>
 
       <div className="game-card-content">

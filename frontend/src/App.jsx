@@ -5,8 +5,10 @@ import AuthLayout from './layouts/AuthLayout'
 import GlobalLayout from './layouts/GlobalLayout'
 import CatalogPage from './pages/CatalogPage'
 import CartPage from './pages/CartPage'
+import CheckoutPage from './pages/CheckoutPage'
 import HomePage from './pages/HomePage'
 import GameDetailsPage from './pages/GameDetailsPage'
+import LibraryPage from './pages/LibraryPage'
 import LoginPage from './pages/LoginPage'
 import NotFoundPage from './pages/NotFoundPage'
 import ProfilePage from './pages/ProfilePage'
@@ -24,6 +26,22 @@ function App() {
           element={
             <ProtectedRoute>
               <CartPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="checkout"
+          element={
+            <ProtectedRoute>
+              <CheckoutPage />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="library"
+          element={
+            <ProtectedRoute>
+              <LibraryPage />
             </ProtectedRoute>
           }
         />

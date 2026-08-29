@@ -1,0 +1,119 @@
+/* KAN-20 checkout destination / library handoff */
+.library-page {
+  padding: 48px 0 72px;
+}
+
+.library-success,
+.library-empty {
+  padding: 48px 24px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: linear-gradient(145deg, rgba(20, 26, 44, 0.88), rgba(11, 16, 29, 0.86));
+  text-align: center;
+}
+
+.library-success-icon {
+  display: grid;
+  place-items: center;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 18px;
+  border: 1px solid rgba(123, 146, 255, 0.35);
+  border-radius: 17px;
+  background: rgba(123, 146, 255, 0.1);
+  color: var(--blue-bright);
+  font-size: 1.5rem;
+  font-weight: 900;
+}
+
+.library-success h1,
+.library-empty h1 {
+  margin: 12px 0 0;
+  font-size: clamp(2.2rem, 5vw, 4rem);
+  line-height: 1;
+  letter-spacing: -0.06em;
+}
+
+.library-success p,
+.library-empty p {
+  max-width: 680px;
+  margin: 16px auto 0;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+.library-purchased {
+  margin-top: 18px;
+  padding: 22px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--bg-card);
+}
+
+.library-section-heading > strong {
+  color: #ff8dc1;
+  font-size: 0.9rem;
+}
+
+.library-purchased-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.library-game {
+  display: grid;
+  grid-template-columns: 94px minmax(0, 1fr);
+  gap: 12px;
+  align-items: center;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.library-game-cover {
+  height: 74px;
+}
+
+.library-game-info {
+  display: grid;
+  min-width: 0;
+  gap: 5px;
+}
+
+.library-game-info a {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 0.86rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-game-info a:hover {
+  color: var(--blue-bright);
+}
+
+.library-game-info span {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.library-actions {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+@media (max-width: 700px) {
+  .library-purchased-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
