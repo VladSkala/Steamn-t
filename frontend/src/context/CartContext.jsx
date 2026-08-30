@@ -119,6 +119,20 @@ function CartProvider({ children }) {
     }
   }, [userId])
 
+  const clearCart = useCallback(() => {
+    if (!userId) return
+
+    requestGeneration.current += 1
+    setCartState((previous) => ({
+      ownerId: userId,
+      cart: previous.ownerId === userId && previous.cart
+        ? { ...previous.cart, items: [], total: '0.00' }
+        : { items: [], total: '0.00' },
+      error: '',
+      isLoading: false,
+    }))
+  }, [userId])
+
   const addToCart = useCallback(async (gameId) => {
     if (!userId) {
       throw new Error('Sign in before adding a game to your cart.')
@@ -185,6 +199,7 @@ function CartProvider({ children }) {
       addToCart,
       removeFromCart,
       refreshCart,
+      clearCart,
       isInCart,
     }),
     [
@@ -195,6 +210,7 @@ function CartProvider({ children }) {
       addToCart,
       removeFromCart,
       refreshCart,
+      clearCart,
       isInCart,
     ],
   )

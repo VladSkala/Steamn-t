@@ -3,8 +3,6 @@ import { useEffect, useMemo, useState } from 'react'
 import CatalogFeedback from '../components/CatalogFeedback'
 import GameCard from '../components/GameCard'
 import useCatalogData from '../hooks/useCatalogData'
-import { getLibrary } from '../api/library'
-import { useAuth } from '../hooks/useAuth'
 
 const SORT_OPTIONS = [
   { value: '', label: 'Title: A to Z' },
@@ -12,8 +10,6 @@ const SORT_OPTIONS = [
   { value: 'price', label: 'Price: Low to High' },
   { value: '-price', label: 'Price: High to Low' },
 ]
-
-const EMPTY_SET = new Set()
 
 const collectGenres = (apiGenres) =>
   [...apiGenres]
@@ -38,42 +34,6 @@ function CatalogPage() {
     genre: selectedGenre,
     ordering,
   })
-  const { user, isAuthenticated, isLoading: authLoading } = useAuth()
-  const [libraryState, setLibraryState] = useState({ ownerId: null, gameIds: new Set() })
-
-  useEffect(() => {
-    if (authLoading || !isAuthenticated) {
-      return undefined
-    }
-
-    const controller = new AbortController()
-
-    getLibrary({ signal: controller.signal })
-      .then((items) => {
-        if (!controller.signal.aborted) {
-          setLibraryState({
-            ownerId: String(user.id),
-            gameIds: new Set(
-              items
-                .map((item) => item?.game?.id ?? item?.game_id)
-                .filter((id) => id != null)
-                .map(String),
-            ),
-          })
-        }
-      })
-      .catch((requestError) => {
-        if (controller.signal.aborted || requestError?.code === 'ERR_CANCELED') return
-        setLibraryState({ ownerId: String(user.id), gameIds: new Set() })
-      })
-
-    return () => controller.abort()
-  }, [authLoading, isAuthenticated, user?.id])
-
-  const libraryGameIds =
-    isAuthenticated && libraryState.ownerId === String(user?.id)
-      ? libraryState.gameIds
-      : EMPTY_SET
 
   const availableGenres = useMemo(() => collectGenres(genres), [genres])
 
@@ -177,15 +137,7 @@ function CatalogPage() {
           )}
           {!loading && !error && games.length > 0 && (
             <div className={view === 'grid' ? 'catalog-games-grid' : 'catalog-games-list'}>
-              {games.map((game) => (
-                <GameCard
-                  key={game.id}
-                  game={game}
-                  variant="catalog"
-                  view={view}
-                  isOwned={libraryGameIds.has(String(game.id))}
-                />
-              ))}
+              {games.map((game) => <GameCard key={game.id} game={game} variant="catalog" view={view} />)}
             </div>
           )}
         </section>

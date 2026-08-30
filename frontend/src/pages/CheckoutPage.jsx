@@ -1,11 +1,9 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 
 import CatalogFeedback from '../components/CatalogFeedback'
 import { checkoutCart } from '../api/checkout'
 import { useCart } from '../hooks/useCart'
-import { useAuth } from '../hooks/useAuth'
-import { saveLibraryItems } from '../utils/libraryStorage'
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -31,13 +29,32 @@ const getCheckoutError = (error) =>
   error?.message ||
   'Demo payment could not be completed. Please try again.'
 
+const isCanceledRequest = (error) =>
+  error?.code === 'ERR_CANCELED' ||
+  error?.name === 'CanceledError' ||
+  error?.name === 'AbortError'
+
 function CheckoutPage() {
   const navigate = useNavigate()
-  const { cart, isLoading, error, refreshCart, removeFromCart } = useCart()
-  const { user } = useAuth()
+  const {
+    cart,
+    isLoading,
+    error,
+    refreshCart,
+    removeFromCart,
+    clearCart,
+  } = useCart()
   const [isPaying, setIsPaying] = useState(false)
   const [checkoutError, setCheckoutError] = useState('')
   const [alreadyOwnedGameIds, setAlreadyOwnedGameIds] = useState([])
+  const mountedRef = useRef(true)
+  const checkoutControllerRef = useRef(null)
+  const payingRef = useRef(false)
+
+  useEffect(() => () => {
+    mountedRef.current = false
+    checkoutControllerRef.current?.abort()
+  }, [])
 
   const items = Array.isArray(cart?.items) ? cart.items : []
 
@@ -48,14 +65,21 @@ function CheckoutPage() {
   }
 
   const handlePayDemo = async () => {
+    if (payingRef.current) return
+
+    const controller = new AbortController()
+    checkoutControllerRef.current = controller
+    payingRef.current = true
     setIsPaying(true)
     setCheckoutError('')
     setAlreadyOwnedGameIds([])
 
     try {
-      const order = await checkoutCart()
-      saveLibraryItems(user?.id, order.items)
-      refreshCart().catch(() => {})
+      const order = await checkoutCart({ signal: controller.signal })
+
+      if (controller.signal.aborted || !mountedRef.current) return
+
+      clearCart()
       navigate('/library', {
         replace: true,
         state: {
@@ -64,6 +88,8 @@ function CheckoutPage() {
         },
       })
     } catch (requestError) {
+      if (isCanceledRequest(requestError) || !mountedRef.current) return
+
       const responseData = requestError?.response?.data
       const ownedIds = Array.isArray(responseData?.game_ids)
         ? responseData.game_ids.map(String)
@@ -84,7 +110,12 @@ function CheckoutPage() {
       } else {
         setCheckoutError(getCheckoutError(requestError))
       }
-      setIsPaying(false)
+    } finally {
+      if (checkoutControllerRef.current === controller) {
+        checkoutControllerRef.current = null
+        payingRef.current = false
+        if (mountedRef.current) setIsPaying(false)
+      }
     }
   }
 
