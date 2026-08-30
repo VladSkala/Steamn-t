@@ -1,9 +1,4 @@
-import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-
-import { useAuth } from '../hooks/useAuth'
-import { getStoredLibrary, saveLibraryItems } from '../utils/libraryStorage'
-import { getLibrary } from '../api/library'
 
 const priceFormatter = new Intl.NumberFormat('en-US', {
   style: 'currency',
@@ -26,33 +21,13 @@ const formatPrice = (price) => {
 
 function LibraryPage() {
   const location = useLocation()
-  const { user } = useAuth()
   const order = location.state?.order
-  const isCheckoutSuccess = location.state?.checkoutSuccess === true
-  const stateItems = Array.isArray(order?.items) ? order.items : []
-  const [libraryItems, setLibraryItems] = useState(() =>
-    stateItems.length > 0 ? stateItems : getStoredLibrary(user?.id),
+  const isCheckoutSuccess = Boolean(
+    location.state?.checkoutSuccess === true &&
+    order?.status === 'completed' &&
+    Array.isArray(order?.items),
   )
-
-  useEffect(() => {
-    const controller = new AbortController()
-    getLibrary({ signal: controller.signal })
-      .then((items) => {
-        if (!controller.signal.aborted) {
-          setLibraryItems(items)
-          saveLibraryItems(user?.id, items)
-        }
-      })
-      .catch((requestError) => {
-        if (controller.signal.aborted || requestError?.code === 'ERR_CANCELED') return
-        setLibraryItems(getStoredLibrary(user?.id))
-      })
-
-    return () => controller.abort()
-  }, [user?.id])
-
-  const items = libraryItems
-
+  const items = isCheckoutSuccess ? order.items : []
 
   return (
     <div className="library-page">
@@ -62,15 +37,9 @@ function LibraryPage() {
           <span className="section-kicker">PURCHASE COMPLETE</span>
           <h1>Your games are in the library.</h1>
           <p>
-            Demo order #{order?.id} was completed successfully. No real payment
+            Demo order #{order.id} was completed successfully. No real payment
             was processed.
           </p>
-        </section>
-      ) : items.length > 0 ? (
-        <section className="library-success" role="status">
-          <span className="section-kicker">LIBRARY</span>
-          <h1>Your library</h1>
-          <p>Your purchased games are ready to play.</p>
         </section>
       ) : (
         <section className="library-empty">
@@ -86,10 +55,10 @@ function LibraryPage() {
         <section className="library-purchased" aria-labelledby="library-purchased-title">
           <div className="library-section-heading">
             <div>
-              <span className="section-kicker">{isCheckoutSuccess ? 'JUST ADDED' : 'PURCHASED GAMES'}</span>
+              <span className="section-kicker">JUST ADDED</span>
               <h2 id="library-purchased-title">Your games</h2>
             </div>
-            {order?.total_price != null && (
+            {order.total_price != null && (
               <strong>{formatPrice(order.total_price)}</strong>
             )}
           </div>

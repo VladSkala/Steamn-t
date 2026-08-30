@@ -400,21 +400,3 @@
 .catalog-sort select:disabled {
   cursor: not-allowed;
 }
-
-
-.game-library-badge {
-  position: absolute;
-  top: 14px;
-  left: 14px;
-  z-index: 2;
-  display: inline-flex;
-  align-items: center;
-  padding: 6px 9px;
-  border: 1px solid rgba(139, 125, 255, 0.35);
-  border-radius: 999px;
-  background: rgba(10, 12, 24, 0.78);
-  color: var(--purple-bright);
-  font-size: 0.68rem;
-  font-weight: 900;
-  backdrop-filter: blur(8px);
-}
