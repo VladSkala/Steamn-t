@@ -5,6 +5,7 @@ from store.views import (
     CartItemDeleteView,
     CartView,
     CheckoutView,
+    LibraryView,
 )
 
 
@@ -23,4 +24,5 @@ urlpatterns = [
         CheckoutView.as_view(),
         name="order-checkout",
     ),
+    path("library/", LibraryView.as_view(), name="library"),
 ]

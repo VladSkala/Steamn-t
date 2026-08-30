@@ -1,14 +1,15 @@
-from django.db.models import Prefetch
+from django.db.models import DecimalField, OuterRef, Prefetch, Subquery
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from store.models import Cart, CartItem, Order, OrderItem
+from store.models import Cart, CartItem, LibraryItem, Order, OrderItem
 from store.serializers import (
     CartItemCreateSerializer,
     CartSerializer,
+    LibraryItemSerializer,
     OrderSerializer,
 )
 from store.services import (
@@ -45,6 +46,34 @@ def get_order_queryset():
     )
     return Order.objects.prefetch_related(
         Prefetch("items", queryset=order_items),
+    )
+
+
+def get_library_queryset(user):
+    """Return completed purchases belonging only to one authenticated user."""
+
+    purchase_price = (
+        OrderItem.objects.filter(
+            order_id=OuterRef("order_id"),
+            game_id=OuterRef("game_id"),
+        )
+        .order_by()
+        .values("price_at_purchase")[:1]
+    )
+    return (
+        LibraryItem.objects.filter(
+            user=user,
+            order__user=user,
+            order__status=Order.Status.COMPLETED,
+        )
+        .select_related("game")
+        .annotate(
+            annotated_price_at_purchase=Subquery(
+                purchase_price,
+                output_field=DecimalField(max_digits=10, decimal_places=2),
+            ),
+        )
+        .order_by("-created_at", "-pk")
     )
 
 
@@ -146,3 +175,18 @@ class CheckoutView(APIView):
             context={"request": request},
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class LibraryView(APIView):
+    """Return only the authenticated user's completed purchases."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request):
+        serializer = LibraryItemSerializer(
+            get_library_queryset(request.user),
+            many=True,
+            context={"request": request},
+        )
+        return Response({"items": serializer.data})
