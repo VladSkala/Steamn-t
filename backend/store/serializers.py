@@ -4,7 +4,7 @@ from django.db import IntegrityError
 from rest_framework import serializers
 
 from games.models import Game
-from store.models import Cart, CartItem, Order, OrderItem
+from store.models import Cart, CartItem, LibraryItem, Order, OrderItem
 
 
 DUPLICATE_GAME_MESSAGE = "This game is already in your cart."
@@ -136,4 +136,22 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ("id", "status", "total_price", "items", "created_at")
+        read_only_fields = fields
+
+
+class LibraryItemSerializer(serializers.ModelSerializer):
+    """One purchased game in the authenticated user's library."""
+
+    game = OrderGameSerializer(read_only=True)
+    price_at_purchase = serializers.DecimalField(
+        source="annotated_price_at_purchase",
+        max_digits=10,
+        decimal_places=2,
+        read_only=True,
+    )
+    purchased_at = serializers.DateTimeField(read_only=True)
+
+    class Meta:
+        model = LibraryItem
+        fields = ("id", "game", "price_at_purchase", "purchased_at")
         read_only_fields = fields
