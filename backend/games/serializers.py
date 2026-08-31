@@ -12,7 +12,21 @@ class GenreSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
-class GameListSerializer(serializers.ModelSerializer):
+class AbsoluteCoverMixin:
+    """Build absolute cover URLs consistently across game serializers."""
+
+    def get_cover(self, game: Game) -> str | None:
+        if not game.cover:
+            return None
+
+        cover_url = game.cover.url
+        request = self.context.get("request")
+        if request is None:
+            return cover_url
+        return request.build_absolute_uri(cover_url)
+
+
+class GameListSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
     """Compact game representation used by catalog collection endpoints."""
 
     genres = GenreSerializer(many=True, read_only=True)
@@ -32,22 +46,9 @@ class GameListSerializer(serializers.ModelSerializer):
         )
         read_only_fields = fields
 
-    def get_cover(self, game: Game) -> str | None:
-        """Return an absolute media URL when a cover exists."""
-
-        if not game.cover:
-            return None
-
-        cover_url = game.cover.url
-        request = self.context.get("request")
-        if request is None:
-            return cover_url
-
-        return request.build_absolute_uri(cover_url)
-
 
 class GameDetailSerializer(GameListSerializer):
-    """Complete read-only representation used by the game detail endpoint."""
+    """Stable public detail contract used by the existing store page."""
 
     class Meta(GameListSerializer.Meta):
         fields = (

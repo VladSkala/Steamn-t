@@ -141,6 +141,7 @@ class LibraryItem(TimeStampedModel):
         on_delete=models.CASCADE,
         related_name="library_items",
     )
+    is_favorite = models.BooleanField(default=False)
 
     @property
     def purchased_at(self):
@@ -159,3 +160,31 @@ class LibraryItem(TimeStampedModel):
 
     def __str__(self) -> str:
         return f"{self.game.title} in {self.user.username}'s library"
+
+
+class LibraryCollection(TimeStampedModel):
+    """A named group of games owned by exactly one user."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="library_collections",
+    )
+    name = models.CharField(max_length=80)
+    games = models.ManyToManyField(
+        Game,
+        related_name="library_collections",
+        blank=True,
+    )
+
+    class Meta:
+        ordering = ["name", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "name"],
+                name="unique_library_collection_name_per_user",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.name} — {self.user.username}"
