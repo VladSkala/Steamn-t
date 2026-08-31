@@ -50,6 +50,44 @@ class ProfileSerializer(serializers.ModelSerializer):
         return normalized_email
 
 
+class CurrentUserProfileSerializer(ProfileSerializer):
+    """Profile-page contract with read-only data for the Figma summary cards."""
+
+    display_name = serializers.SerializerMethodField()
+    stats = serializers.SerializerMethodField()
+
+    class Meta(ProfileSerializer.Meta):
+        fields = (
+            "id",
+            "username",
+            "display_name",
+            "email",
+            "first_name",
+            "last_name",
+            "avatar",
+            "created_at",
+            "stats",
+        )
+        read_only_fields = ProfileSerializer.Meta.read_only_fields + (
+            "display_name",
+            "stats",
+        )
+
+    def get_display_name(self, user):
+        return user.get_full_name().strip() or user.username
+
+    def get_stats(self, user):
+        return {
+            "library_games": user.library_games_count,
+            "favorite_games": user.favorite_games_count,
+            "wishlist_games": user.wishlist_games_count,
+            "reviews": user.reviews_count,
+            "posts": user.posts_count,
+            "followers": user.followers_count,
+            "following": user.following_count,
+        }
+
+
 class RegistrationSerializer(serializers.ModelSerializer):
     """Validate and create a new project user without exposing passwords."""
 
