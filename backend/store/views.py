@@ -5,11 +5,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from store.models import Cart, CartItem, LibraryItem, Order, OrderItem
+from store.models import (
+    Cart,
+    CartItem,
+    LibraryCollection,
+    LibraryItem,
+    Order,
+    OrderItem,
+)
 from store.serializers import (
     CartItemCreateSerializer,
     CartSerializer,
+    LibraryCollectionSerializer,
     LibraryItemSerializer,
+    LibraryItemUpdateSerializer,
     OrderSerializer,
 )
 from store.services import (
@@ -60,6 +69,10 @@ def get_library_queryset(user):
         .order_by()
         .values("price_at_purchase")[:1]
     )
+    user_collections = LibraryCollection.objects.filter(user=user).only(
+        "id",
+        "user_id",
+    )
     return (
         LibraryItem.objects.filter(
             user=user,
@@ -67,6 +80,12 @@ def get_library_queryset(user):
             order__status=Order.Status.COMPLETED,
         )
         .select_related("game")
+        .prefetch_related(
+            Prefetch(
+                "game__library_collections",
+                queryset=user_collections,
+            ),
+        )
         .annotate(
             annotated_price_at_purchase=Subquery(
                 purchase_price,
@@ -95,8 +114,6 @@ def serialize_cart(cart: Cart, request) -> dict:
 
 
 class CartView(APIView):
-    """Return the authenticated user's cart."""
-
     permission_classes = (IsAuthenticated,)
     http_method_names = ("get", "head", "options")
 
@@ -106,8 +123,6 @@ class CartView(APIView):
 
 
 class CartItemCreateView(APIView):
-    """Add one existing game to the authenticated user's cart."""
-
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "options")
 
@@ -119,7 +134,6 @@ class CartItemCreateView(APIView):
         )
         serializer.is_valid(raise_exception=True)
         serializer.save()
-
         return Response(
             serialize_cart(cart, request),
             status=status.HTTP_201_CREATED,
@@ -127,8 +141,6 @@ class CartItemCreateView(APIView):
 
 
 class CartItemDeleteView(APIView):
-    """Remove one game from only the authenticated user's cart."""
-
     permission_classes = (IsAuthenticated,)
     http_method_names = ("delete", "options")
 
@@ -143,8 +155,6 @@ class CartItemDeleteView(APIView):
 
 
 class CheckoutView(APIView):
-    """Complete one authenticated user's cart as an atomic demo purchase."""
-
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "options")
 
@@ -153,10 +163,7 @@ class CheckoutView(APIView):
             order = checkout_user_cart(request.user)
         except EmptyCartError:
             return Response(
-                {
-                    "code": "empty_cart",
-                    "detail": EMPTY_CART_MESSAGE,
-                },
+                {"code": "empty_cart", "detail": EMPTY_CART_MESSAGE},
                 status=status.HTTP_400_BAD_REQUEST,
             )
         except AlreadyOwnedGamesError as error:
@@ -190,3 +197,97 @@ class LibraryView(APIView):
             context={"request": request},
         )
         return Response({"items": serializer.data})
+
+
+class LibraryItemUpdateView(APIView):
+    """Update favorite state without allowing ownership changes."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("patch", "options")
+
+    def patch(self, request, item_id: int):
+        item = get_object_or_404(
+            LibraryItem,
+            pk=item_id,
+            user=request.user,
+            order__status=Order.Status.COMPLETED,
+        )
+        serializer = LibraryItemUpdateSerializer(
+            item,
+            data=request.data,
+            partial=True,
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(
+            {"id": item.pk, "is_favorite": item.is_favorite},
+        )
+
+
+class LibraryCollectionListCreateView(APIView):
+    """List or create collections owned by the authenticated user."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "post", "head", "options")
+
+    def get(self, request):
+        collections = LibraryCollection.objects.filter(user=request.user).prefetch_related(
+            "games",
+        )
+        serializer = LibraryCollectionSerializer(
+            collections,
+            many=True,
+            context={"request": request},
+        )
+        return Response({"items": serializer.data})
+
+    def post(self, request):
+        serializer = LibraryCollectionSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class LibraryCollectionDetailView(APIView):
+    """Read, update, or delete one collection owned by the caller."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "put", "patch", "delete", "head", "options")
+
+    def get_object(self, request, collection_id: int) -> LibraryCollection:
+        return get_object_or_404(
+            LibraryCollection.objects.prefetch_related("games"),
+            pk=collection_id,
+            user=request.user,
+        )
+
+    def get(self, request, collection_id: int):
+        serializer = LibraryCollectionSerializer(
+            self.get_object(request, collection_id),
+            context={"request": request},
+        )
+        return Response(serializer.data)
+
+    def put(self, request, collection_id: int):
+        return self._update(request, collection_id, partial=False)
+
+    def patch(self, request, collection_id: int):
+        return self._update(request, collection_id, partial=True)
+
+    def _update(self, request, collection_id: int, partial: bool):
+        serializer = LibraryCollectionSerializer(
+            self.get_object(request, collection_id),
+            data=request.data,
+            partial=partial,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, collection_id: int):
+        self.get_object(request, collection_id).delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)

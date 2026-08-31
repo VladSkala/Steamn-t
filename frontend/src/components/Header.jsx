@@ -6,6 +6,7 @@ import { useCart } from '../hooks/useCart'
 const navigationItems = [
   { label: 'Home', to: '/' },
   { label: 'Catalog', to: '/catalog' },
+  { label: 'Library', to: '/library', requiresAuth: true },
 ]
 
 function Header() {
@@ -73,23 +74,30 @@ function Header() {
           className={`header-menu${menuOpen ? ' is-open' : ''}`}
         >
           <nav className="main-nav" aria-label="Main navigation">
-            {navigationItems.map((item) => (
-              <NavLink
-                key={item.label}
-                to={item.to}
-                end={item.to === '/'}
-                className={({ isActive }) =>
-                  `nav-link${isActive ? ' active' : ''}`
-                }
-                onClick={closeMenu}
-              >
-                {item.label}
-              </NavLink>
-            ))}
+            {navigationItems
+              .filter((item) => !item.requiresAuth || isAuthenticated)
+              .map((item) => (
+                <NavLink
+                  key={item.label}
+                  to={item.to}
+                  end={item.to === '/'}
+                  className={({ isActive }) =>
+                    `nav-link${isActive ? ' active' : ''}`
+                  }
+                  onClick={closeMenu}
+                >
+                  {item.label}
+                </NavLink>
+              ))}
           </nav>
 
           <div className="header-actions">
-            <Link to="/cart" className="cart-header-link" onClick={closeMenu} aria-label={`Cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}>
+            <Link
+              to="/cart"
+              className="cart-header-link"
+              onClick={closeMenu}
+              aria-label={`Cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+            >
               <span className="cart-header-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
                   <path d="M3.5 4h2l1.7 10.1a2 2 0 0 0 2 1.7h7.9a2 2 0 0 0 1.9-1.3L21 7H7" />
@@ -103,13 +111,36 @@ function Header() {
             </Link>
             {isAuthenticated ? (
               <>
-                <Link to="/profile" className="login-button" onClick={closeMenu}>Profile</Link>
-                <button type="button" className="signup-button" onClick={() => { logout(); closeMenu() }}>Logout</button>
+                <Link
+                  to="/profile"
+                  className="login-button"
+                  onClick={closeMenu}
+                >
+                  Profile
+                </Link>
+                <button
+                  type="button"
+                  className="signup-button"
+                  onClick={() => {
+                    logout()
+                    closeMenu()
+                  }}
+                >
+                  Logout
+                </button>
               </>
             ) : (
               <>
-                <Link to="/login" className="login-button" onClick={closeMenu}>Login</Link>
-                <Link to="/register" className="signup-button" onClick={closeMenu}>Sign up</Link>
+                <Link to="/login" className="login-button" onClick={closeMenu}>
+                  Login
+                </Link>
+                <Link
+                  to="/register"
+                  className="signup-button"
+                  onClick={closeMenu}
+                >
+                  Sign up
+                </Link>
               </>
             )}
           </div>

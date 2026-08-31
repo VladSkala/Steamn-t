@@ -5,6 +5,9 @@ from store.views import (
     CartItemDeleteView,
     CartView,
     CheckoutView,
+    LibraryCollectionDetailView,
+    LibraryCollectionListCreateView,
+    LibraryItemUpdateView,
     LibraryView,
 )
 
@@ -25,4 +28,19 @@ urlpatterns = [
         name="order-checkout",
     ),
     path("library/", LibraryView.as_view(), name="library"),
+    path(
+        "library/items/<int:item_id>/",
+        LibraryItemUpdateView.as_view(),
+        name="library-item-update",
+    ),
+    path(
+        "library/collections/",
+        LibraryCollectionListCreateView.as_view(),
+        name="library-collections",
+    ),
+    path(
+        "library/collections/<int:collection_id>/",
+        LibraryCollectionDetailView.as_view(),
+        name="library-collection-detail",
+    ),
 ]

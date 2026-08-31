@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "users",
     "games",
     "store",
+    "community",
 ]
 
 AUTH_USER_MODEL = "users.User"
@@ -89,18 +90,37 @@ WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
 
-DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.environ["POSTGRES_DB"],
-        "USER": os.environ["POSTGRES_USER"],
-        "PASSWORD": os.environ["POSTGRES_PASSWORD"],
-        "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
-        "PORT": os.getenv("POSTGRES_PORT", "5432"),
-        "CONN_MAX_AGE": int(os.getenv("POSTGRES_CONN_MAX_AGE", "60")),
-        "CONN_HEALTH_CHECKS": True,
+DATABASE_ENGINE = os.getenv("DJANGO_DATABASE_ENGINE", "postgresql").strip().lower()
+
+if DATABASE_ENGINE == "sqlite":
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.sqlite3",
+            "NAME": os.getenv("SQLITE_NAME", BASE_DIR / "db.sqlite3"),
+        },
     }
-}
+else:
+    DATABASES = {
+        "default": {
+            "ENGINE": "django.db.backends.postgresql",
+            "NAME": os.environ["POSTGRES_DB"],
+            "USER": os.environ["POSTGRES_USER"],
+            "PASSWORD": os.environ["POSTGRES_PASSWORD"],
+            "HOST": os.getenv("POSTGRES_HOST", "127.0.0.1"),
+            "PORT": os.getenv("POSTGRES_PORT", "5432"),
+            # Development must not keep one PostgreSQL connection alive per
+            # runserver thread. Production can opt in to persistence with
+            # POSTGRES_CONN_MAX_AGE (or put PgBouncer in front of Django).
+            "CONN_MAX_AGE": int(os.getenv("POSTGRES_CONN_MAX_AGE", "0")),
+            "CONN_HEALTH_CHECKS": True,
+            "OPTIONS": {
+                "connect_timeout": int(os.getenv("POSTGRES_CONNECT_TIMEOUT", "5")),
+                "application_name": os.getenv(
+                    "POSTGRES_APPLICATION_NAME", "steamnt-django"
+                ),
+            },
+        },
+    }
 
 
 AUTH_PASSWORD_VALIDATORS = [

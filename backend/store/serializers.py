@@ -4,13 +4,32 @@ from django.db import IntegrityError
 from rest_framework import serializers
 
 from games.models import Game
-from store.models import Cart, CartItem, LibraryItem, Order, OrderItem
+from store.models import (
+    Cart,
+    CartItem,
+    LibraryCollection,
+    LibraryItem,
+    Order,
+    OrderItem,
+)
 
 
 DUPLICATE_GAME_MESSAGE = "This game is already in your cart."
 
 
-class CartGameSerializer(serializers.ModelSerializer):
+class AbsoluteCoverMixin:
+    def get_cover(self, game: Game) -> str | None:
+        if not game.cover:
+            return None
+
+        cover_url = game.cover.url
+        request = self.context.get("request")
+        if request is None:
+            return cover_url
+        return request.build_absolute_uri(cover_url)
+
+
+class CartGameSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
     """Compact game representation embedded in a cart item."""
 
     cover = serializers.SerializerMethodField()
@@ -19,19 +38,6 @@ class CartGameSerializer(serializers.ModelSerializer):
         model = Game
         fields = ("id", "title", "price", "cover", "developer")
         read_only_fields = fields
-
-    def get_cover(self, game: Game) -> str | None:
-        """Return an absolute media URL when a cover exists."""
-
-        if not game.cover:
-            return None
-
-        cover_url = game.cover.url
-        request = self.context.get("request")
-        if request is None:
-            return cover_url
-
-        return request.build_absolute_uri(cover_url)
 
 
 class CartItemSerializer(serializers.ModelSerializer):
@@ -95,8 +101,8 @@ class CartItemCreateSerializer(serializers.ModelSerializer):
             ) from error
 
 
-class OrderGameSerializer(serializers.ModelSerializer):
-    """Stable game identity displayed inside a completed order."""
+class OrderGameSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
+    """Stable game identity displayed inside orders and KAN-22 library rows."""
 
     cover = serializers.SerializerMethodField()
 
@@ -104,17 +110,6 @@ class OrderGameSerializer(serializers.ModelSerializer):
         model = Game
         fields = ("id", "title", "cover", "developer")
         read_only_fields = fields
-
-    def get_cover(self, game: Game) -> str | None:
-        if not game.cover:
-            return None
-
-        cover_url = game.cover.url
-        request = self.context.get("request")
-        if request is None:
-            return cover_url
-
-        return request.build_absolute_uri(cover_url)
 
 
 class OrderItemSerializer(serializers.ModelSerializer):
@@ -140,7 +135,7 @@ class OrderSerializer(serializers.ModelSerializer):
 
 
 class LibraryItemSerializer(serializers.ModelSerializer):
-    """One purchased game in the authenticated user's library."""
+    """Stable KAN-22 purchased-game response contract."""
 
     game = OrderGameSerializer(read_only=True)
     price_at_purchase = serializers.DecimalField(
@@ -155,3 +150,77 @@ class LibraryItemSerializer(serializers.ModelSerializer):
         model = LibraryItem
         fields = ("id", "game", "price_at_purchase", "purchased_at")
         read_only_fields = fields
+
+
+class LibraryItemUpdateSerializer(serializers.ModelSerializer):
+    """Update only state owned by the library-item owner."""
+
+    class Meta:
+        model = LibraryItem
+        fields = ("is_favorite",)
+
+
+class LibraryCollectionSerializer(serializers.ModelSerializer):
+    """Read and write a named collection containing owned games only."""
+
+    game_ids = serializers.PrimaryKeyRelatedField(
+        source="games",
+        queryset=Game.objects.all(),
+        many=True,
+        required=False,
+    )
+
+    class Meta:
+        model = LibraryCollection
+        fields = ("id", "name", "game_ids", "created_at", "updated_at")
+        read_only_fields = ("id", "created_at", "updated_at")
+
+    def validate_name(self, value: str) -> str:
+        name = value.strip()
+        if not name:
+            raise serializers.ValidationError("Collection name cannot be empty.")
+
+        queryset = LibraryCollection.objects.filter(
+            user=self.context["request"].user,
+            name__iexact=name,
+        )
+        if self.instance is not None:
+            queryset = queryset.exclude(pk=self.instance.pk)
+        if queryset.exists():
+            raise serializers.ValidationError(
+                "You already have a collection with this name.",
+            )
+        return name
+
+    def validate_game_ids(self, games: list[Game]) -> list[Game]:
+        user = self.context["request"].user
+        game_ids = {game.pk for game in games}
+        owned_ids = set(
+            LibraryItem.objects.filter(
+                user=user,
+                game_id__in=game_ids,
+                order__status=Order.Status.COMPLETED,
+            ).values_list("game_id", flat=True),
+        )
+        if owned_ids != game_ids:
+            raise serializers.ValidationError(
+                "Collections can contain only games in your library.",
+            )
+        return games
+
+    def create(self, validated_data):
+        games = validated_data.pop("games", [])
+        collection = LibraryCollection.objects.create(
+            user=self.context["request"].user,
+            **validated_data,
+        )
+        collection.games.set(games)
+        return collection
+
+    def update(self, instance, validated_data):
+        games = validated_data.pop("games", None)
+        instance.name = validated_data.get("name", instance.name)
+        instance.save(update_fields=["name", "updated_at"])
+        if games is not None:
+            instance.games.set(games)
+        return instance
