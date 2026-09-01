@@ -41,11 +41,9 @@ export const clearTokens = () => {
   window.dispatchEvent(new Event(AUTH_CLEARED_EVENT))
 }
 
+// Axios must infer JSON versus multipart so browser-generated FormData boundaries survive.
 const api = axios.create({
   baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
 })
 
 let refreshPromise = null
