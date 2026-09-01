@@ -23,7 +23,10 @@ const getProfileErrorMessage = (error) => {
   if (error.response.status >= 500) {
     return 'The profile service had a problem. Please try again.'
   }
-  return error.response.data?.detail || 'Your profile could not be loaded. Please try again.'
+  return (
+    error.response.data?.detail ||
+    'Your profile could not be loaded. Please try again.'
+  )
 }
 
 export default function useProfile() {
@@ -41,7 +44,11 @@ export default function useProfile() {
       })
       .catch((error) => {
         if (controller.signal.aborted || isCanceledRequest(error)) return
-        setState({ data: null, status: 'error', error: getProfileErrorMessage(error) })
+        setState({
+          data: null,
+          status: 'error',
+          error: getProfileErrorMessage(error),
+        })
       })
 
     return () => controller.abort()

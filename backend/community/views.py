@@ -203,6 +203,8 @@ class LibraryFeedView(APIView):
                 follower=request.user,
             ).values_list("following_id", flat=True)
             posts = posts.filter(author_id__in=followed_ids)
+        elif tab == "mine":
+            posts = posts.filter(author=request.user)
         elif tab == "library":
             posts = posts.filter(game_id__in=get_owned_game_ids(request.user))
         elif tab != "recommended":
