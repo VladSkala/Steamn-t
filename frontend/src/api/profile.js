@@ -13,7 +13,8 @@ export const getProfile = async ({ signal } = {}) => {
 }
 
 export const updateProfile = async (updates, { signal } = {}) => {
-  const hasAvatarFile = updates?.avatar instanceof File
+  const hasAvatarFile =
+    typeof File !== 'undefined' && updates?.avatar instanceof File
 
   if (!hasAvatarFile) {
     const { data } = await api.patch('/profile/', updates, { signal })
@@ -30,9 +31,6 @@ export const updateProfile = async (updates, { signal } = {}) => {
     formData.append(key, value)
   })
 
-  const { data } = await api.patch('/profile/', formData, {
-    signal,
-    headers: { 'Content-Type': 'multipart/form-data' },
-  })
+  const { data } = await api.patch('/profile/', formData, { signal })
   return ensureProfile(data)
 }

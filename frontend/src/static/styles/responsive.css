@@ -15,8 +15,7 @@
   }
 
   .home-page,
-  .catalog-page,
-  .profile-page {
+  .catalog-page {
     padding-bottom: 52px;
   }
 
@@ -95,10 +94,6 @@
   .catalog-card .game-card-content h3,
   .game-cover-title {
     overflow-wrap: anywhere;
-  }
-
-  .profile-hero {
-    padding: 28px;
   }
 
   .footer-container {
@@ -183,19 +178,6 @@
     min-width: 0;
   }
 
-  .profile-hero {
-    align-items: flex-start;
-    flex-direction: column;
-    padding: 24px;
-  }
-
-  .profile-avatar {
-    width: 72px;
-    height: 72px;
-    border-radius: 20px;
-    font-size: 1.8rem;
-  }
-
   .home-bottom-cta {
     padding: 28px;
   }
@@ -216,7 +198,6 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
-
 
 @media (max-width: 380px) {
   .catalog-card.list-view .game-card-content {

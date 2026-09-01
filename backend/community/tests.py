@@ -191,6 +191,25 @@ class LibraryCommunityAPITests(APITestCase):
             {followed_post.pk, other_post.pk},
         )
 
+    def test_feed_mine_tab_returns_only_current_users_posts(self):
+        own_post = self.create_post(
+            author=self.user,
+            kind=CommunityPost.Kind.SCREENSHOT,
+        )
+        self.create_post(author=self.friend, kind=CommunityPost.Kind.SCREENSHOT)
+
+        response = self.client.get(
+            reverse("community:library-feed"),
+            {"tab": "mine", "ordering": "latest"},
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [post["id"] for post in response.data["items"]],
+            [own_post.pk],
+        )
+        self.assertEqual(response.data["items"][0]["author"]["id"], self.user.pk)
+
     def test_feed_search_and_kind_filter_are_applied(self):
         matched = CommunityPost.objects.create(
             author=self.friend,
