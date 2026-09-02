@@ -21,6 +21,8 @@ from community.serializers import (
     OwnedLibraryItemSerializer,
     PostCommentSerializer,
     UserSummarySerializer,
+    WishlistItemCreateSerializer,
+    WishlistItemSerializer,
 )
 from store.models import LibraryCollection, LibraryItem, Order
 from store.serializers import LibraryCollectionSerializer
@@ -69,6 +71,70 @@ def get_owned_library_item(user, game_id: int) -> LibraryItem:
         get_library_queryset(user),
         game_id=game_id,
     )
+
+
+def get_wishlist_queryset(user):
+    """Return one user's wishlist with all embedded game data preloaded."""
+
+    return (
+        GameWishlist.objects.filter(user=user)
+        .select_related("game")
+        .prefetch_related("game__genres")
+        .order_by("-created_at", "-pk")
+    )
+
+
+class WishlistListView(APIView):
+    """List only the authenticated user's personal wishlist."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request):
+        serializer = WishlistItemSerializer(
+            get_wishlist_queryset(request.user),
+            many=True,
+            context={"request": request},
+        )
+        return Response({"items": serializer.data})
+
+
+class WishlistItemCreateView(APIView):
+    """Add one catalog game to the authenticated user's wishlist."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request):
+        serializer = WishlistItemCreateSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        item = serializer.save()
+        return Response(
+            WishlistItemSerializer(
+                item,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class WishlistItemDeleteView(APIView):
+    """Remove one game from only the authenticated user's wishlist."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("delete", "options")
+
+    def delete(self, request, game_id: int):
+        item = get_object_or_404(
+            GameWishlist,
+            user=request.user,
+            game_id=game_id,
+        )
+        item.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class LibraryHomeContentView(APIView):

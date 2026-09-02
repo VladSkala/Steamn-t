@@ -1,9 +1,13 @@
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
-from community.models import CommunityPost, GameReview, PostComment
+from community.models import CommunityPost, GameReview, GameWishlist, PostComment
 from games.models import Game
-from games.serializers import GenreSerializer
+from games.serializers import GameListSerializer, GenreSerializer
 from store.models import LibraryItem
+
+
+DUPLICATE_WISHLIST_MESSAGE = "This game is already in your wishlist."
 
 
 class UserSummarySerializer(serializers.Serializer):
@@ -59,6 +63,49 @@ class OwnedGameSerializer(PostGameSerializer):
             "genres",
         )
         read_only_fields = fields
+
+
+class WishlistItemSerializer(serializers.ModelSerializer):
+    """One game saved in the authenticated user's personal wishlist."""
+
+    game = GameListSerializer(read_only=True)
+
+    class Meta:
+        model = GameWishlist
+        fields = ("id", "game", "created_at")
+        read_only_fields = fields
+
+
+class WishlistItemCreateSerializer(serializers.ModelSerializer):
+    """Validate and create a personal wishlist item without duplicates."""
+
+    game_id = serializers.PrimaryKeyRelatedField(
+        queryset=Game.objects.all(),
+        source="game",
+        write_only=True,
+    )
+
+    class Meta:
+        model = GameWishlist
+        fields = ("game_id",)
+
+    def validate_game_id(self, game: Game) -> Game:
+        user = self.context["request"].user
+        if GameWishlist.objects.filter(user=user, game=game).exists():
+            raise serializers.ValidationError(DUPLICATE_WISHLIST_MESSAGE)
+        return game
+
+    def create(self, validated_data):
+        try:
+            with transaction.atomic():
+                return GameWishlist.objects.create(
+                    user=self.context["request"].user,
+                    **validated_data,
+                )
+        except IntegrityError as error:
+            raise serializers.ValidationError(
+                {"game_id": [DUPLICATE_WISHLIST_MESSAGE]},
+            ) from error
 
 
 class OwnedLibraryItemSerializer(serializers.ModelSerializer):
