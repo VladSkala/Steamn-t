@@ -1,0 +1,758 @@
+{
+  "artifact": "STEAMNT_KAN-28_DESIGN_REWORK_QA",
+  "status": "QA_CANDIDATE_NOT_FINAL",
+  "card": "KAN-28",
+  "column": "IN PROGRESS",
+  "branch": "feature/KAN-28-frontend-wishlist",
+  "baseline_commit": "d810447",
+  "baseline_zip_sha256": "f5c5318923463d21681628a7b4408a313330bb06d52bfaff7cd892476ed52f67",
+  "includes_previous_v6_and_hotfixes": true,
+  "full_replacement_files": true,
+  "requires_migrate": true,
+  "added": 82,
+  "modified": 38,
+  "deleted": [],
+  "backend_tests": {
+    "passed": 144,
+    "database": "SQLite",
+    "password_hasher": "sandbox-only MD5 test hasher"
+  },
+  "production_frontend_gate": "PENDING_LOCAL_ESLINT_AND_VITE",
+  "browser": {
+    "completed": 126,
+    "passed": 126,
+    "failed": 0,
+    "planned": 126,
+    "widths": [
+      320,
+      390,
+      700,
+      820,
+      1024,
+      1440
+    ],
+    "failed_cases": []
+  },
+  "files": [
+    {
+      "path": "KAN28_DESIGN_BROWSER_SUMMARY.json",
+      "change": "added",
+      "bytes": 169,
+      "sha256": "0528a9d2c8b895b1a0ad6c37fcb84b050e7d41dc6c6aafbf65c5191fea926101"
+    },
+    {
+      "path": "KAN28_DESIGN_QA_REPORT.md",
+      "change": "added",
+      "bytes": 5880,
+      "sha256": "fb11cb69eb96a03f8d02454d3d4d566ace9579caeb78f3bd82f6bb22cf8fac06"
+    },
+    {
+      "path": "KAN28_DESIGN_README_RU.md",
+      "change": "added",
+      "bytes": 10522,
+      "sha256": "0454cfd5ec344d8d2c753d8586b9a11c19a61a757d800c64582c37ce7791e6fc"
+    },
+    {
+      "path": "KAN28_V6_QA_CANDIDATE_MANIFEST.json",
+      "change": "added",
+      "bytes": 251,
+      "sha256": "2a22e0f7095b8678a33c423d5115d426166188677a3a639a8bf8a2f39e9e1cec"
+    },
+    {
+      "path": "backend/community/migrations/0002_gamereviewimage.py",
+      "change": "added",
+      "bytes": 1325,
+      "sha256": "5203e046c4aac7521d0a5d9cff5d662212db8cab44145cf9552e7a11845899cd"
+    },
+    {
+      "path": "backend/community/models.py",
+      "change": "modified",
+      "bytes": 5785,
+      "sha256": "f46c48d89dce255ebe345cfd5d054617974d1bddf183ca226aa9ab006d9aebe7"
+    },
+    {
+      "path": "backend/community/serializers.py",
+      "change": "modified",
+      "bytes": 7436,
+      "sha256": "c13fd8702f8ab023180fc231cf21957bba3aa997482beb649c0df16c7dd1dbe6"
+    },
+    {
+      "path": "backend/community/test_owned_wishlist.py",
+      "change": "added",
+      "bytes": 2147,
+      "sha256": "7e4da6e74357e8f89052fa28293d9986f38fe1112b484bd3f72078285398f103"
+    },
+    {
+      "path": "backend/community/test_review_images.py",
+      "change": "added",
+      "bytes": 5240,
+      "sha256": "997cf76542c74e42838f412aa3bbcd95a10a1292786d912c35611f7c9873a9b4"
+    },
+    {
+      "path": "backend/community/test_wishlist_api.py",
+      "change": "modified",
+      "bytes": 9712,
+      "sha256": "96f11357c6affa428f59a7648b8aea97adc068411c05c65e2a065ff6616a9820"
+    },
+    {
+      "path": "backend/community/views.py",
+      "change": "modified",
+      "bytes": 16309,
+      "sha256": "1098c99f9fcaf0c118fc1245ce7f312115620663f5dedb1e10dcc353e6b24759"
+    },
+    {
+      "path": "backend/core/test_mvp_integration.py",
+      "change": "modified",
+      "bytes": 7466,
+      "sha256": "b8dc04c4a36dda8a86cba9507139dcc8ef978ce345e886996182eed5b19d113f"
+    },
+    {
+      "path": "backend/games/admin.py",
+      "change": "modified",
+      "bytes": 493,
+      "sha256": "f1a19046202479ac9729f4762f4ee40dedf00a7a771cd2e3f0aa7815511a4d81"
+    },
+    {
+      "path": "backend/games/demo/README.md",
+      "change": "added",
+      "bytes": 960,
+      "sha256": "a841abaff05712f24d70e2a02df5afb7e274184ab22b90157cc02f62d556ee70"
+    },
+    {
+      "path": "backend/games/demo/assets/aether-drift/cover.webp",
+      "change": "added",
+      "bytes": 12412,
+      "sha256": "d91a98081f2852501c64812d78f2c54cf3d166d95cc1fc0b3f9afd5d55d164da"
+    },
+    {
+      "path": "backend/games/demo/assets/aether-drift/scene-1.webp",
+      "change": "added",
+      "bytes": 15448,
+      "sha256": "248e05ea937fe44acadd0bf702a14828ef379938fe6fbed6507aab85c8e1d26a"
+    },
+    {
+      "path": "backend/games/demo/assets/aether-drift/scene-2.webp",
+      "change": "added",
+      "bytes": 15332,
+      "sha256": "d1c7ecfdfdd0078dfdd618d4d519d8411f596b5bd19c9412cb40b8eab78daee7"
+    },
+    {
+      "path": "backend/games/demo/assets/aether-drift/scene-3.webp",
+      "change": "added",
+      "bytes": 15858,
+      "sha256": "044e99e429e8903c43936604ace6fcb67d7b26fce01155f73218a4d8b22ff7f2"
+    },
+    {
+      "path": "backend/games/demo/assets/afterlight/cover.webp",
+      "change": "added",
+      "bytes": 49260,
+      "sha256": "20c1714a063297740d4d7e8e283e22c0e154dc0ee067ecf58d4772d96e4688aa"
+    },
+    {
+      "path": "backend/games/demo/assets/afterlight/scene-1.webp",
+      "change": "added",
+      "bytes": 62924,
+      "sha256": "600d43b6baf8a2f9ddc806ad9ccdb245fc0b34ba0e7354c04d07edd1773c5fd0"
+    },
+    {
+      "path": "backend/games/demo/assets/afterlight/scene-2.webp",
+      "change": "added",
+      "bytes": 61524,
+      "sha256": "e93c98281cd2bef5526008c66848f10d9b35f85dcb943e357ea722395f6515fe"
+    },
+    {
+      "path": "backend/games/demo/assets/afterlight/scene-3.webp",
+      "change": "added",
+      "bytes": 62794,
+      "sha256": "b66af8b0f540451f4cf7a06f59f2c3d862cdf7eab2d0222782927ed2d9878beb"
+    },
+    {
+      "path": "backend/games/demo/assets/cinderbound/cover.webp",
+      "change": "added",
+      "bytes": 25504,
+      "sha256": "60d23958d82d016abfb252347d11e6023e01579e82295460c934f3d2404fbcdf"
+    },
+    {
+      "path": "backend/games/demo/assets/cinderbound/scene-1.webp",
+      "change": "added",
+      "bytes": 29772,
+      "sha256": "c318e73534c6a7405761c53da90e5b44ff0d4faccfa336c7085b2505869d9a78"
+    },
+    {
+      "path": "backend/games/demo/assets/cinderbound/scene-2.webp",
+      "change": "added",
+      "bytes": 31282,
+      "sha256": "80dc01318ae58b0593b76a8f6ea03edc249bfcdd39b48d0b30eef78e5b5539de"
+    },
+    {
+      "path": "backend/games/demo/assets/cinderbound/scene-3.webp",
+      "change": "added",
+      "bytes": 28740,
+      "sha256": "bc93f652124ebdc4878cb8140be476b095a17e383bf5c0a41092494da4e4e84d"
+    },
+    {
+      "path": "backend/games/demo/assets/deep-current/cover.webp",
+      "change": "added",
+      "bytes": 26464,
+      "sha256": "4651c159cf82206f224f68499b93bedf7b576721f9e222add964643bf8096eee"
+    },
+    {
+      "path": "backend/games/demo/assets/deep-current/scene-1.webp",
+      "change": "added",
+      "bytes": 28566,
+      "sha256": "d3083066041f65a1bed3b8090928536be929e906413a98f588b2e738fd0fc8b5"
+    },
+    {
+      "path": "backend/games/demo/assets/deep-current/scene-2.webp",
+      "change": "added",
+      "bytes": 26676,
+      "sha256": "be88216e1f302fb2a70e83b1841289f8548dab35330bc66198d2b80114b985da"
+    },
+    {
+      "path": "backend/games/demo/assets/deep-current/scene-3.webp",
+      "change": "added",
+      "bytes": 28104,
+      "sha256": "b689e0d0c20c214f39ebd11c13def1c1a6470391ccd12807e19bc095b2cc4dd1"
+    },
+    {
+      "path": "backend/games/demo/assets/hollow-vale/cover.webp",
+      "change": "added",
+      "bytes": 23674,
+      "sha256": "3c61d61e92a38feec20b83872d62f918fb32dd7c5e637947c317580a7b8fa3fb"
+    },
+    {
+      "path": "backend/games/demo/assets/hollow-vale/scene-1.webp",
+      "change": "added",
+      "bytes": 24484,
+      "sha256": "6139a4eebb8a81d359a62c5cadb518f24c08e687c1f7a74c657cea3555185741"
+    },
+    {
+      "path": "backend/games/demo/assets/hollow-vale/scene-2.webp",
+      "change": "added",
+      "bytes": 24470,
+      "sha256": "75d7916bc3235251cf7218317f86c6ff7c20cbb09bd97fe13348c4b47e286241"
+    },
+    {
+      "path": "backend/games/demo/assets/hollow-vale/scene-3.webp",
+      "change": "added",
+      "bytes": 24930,
+      "sha256": "841813619fc38ad47790d77fa7585b2e2b1bfc0aede5a96cf5adf480fd4db86f"
+    },
+    {
+      "path": "backend/games/demo/assets/iron-meridian/cover.webp",
+      "change": "added",
+      "bytes": 46658,
+      "sha256": "9489ea8bd7098780b962442c3be3c4ddd59f385bd370a428e3fb9cb78d97774c"
+    },
+    {
+      "path": "backend/games/demo/assets/iron-meridian/scene-1.webp",
+      "change": "added",
+      "bytes": 60180,
+      "sha256": "6d0a881db3fc0f82dcd19c250270519170ad69cb4bea49ba4fdf76f7b6f03c60"
+    },
+    {
+      "path": "backend/games/demo/assets/iron-meridian/scene-2.webp",
+      "change": "added",
+      "bytes": 62486,
+      "sha256": "3825ab132a088090edacac1778415af6d05571f9fb9e32bbb8e0187836e474b6"
+    },
+    {
+      "path": "backend/games/demo/assets/iron-meridian/scene-3.webp",
+      "change": "added",
+      "bytes": 63422,
+      "sha256": "8d209fbd5491a9236f23d4689ffdbcbd3b593e4c7635923bee9ce1c827424855"
+    },
+    {
+      "path": "backend/games/demo/assets/lumen/cover.webp",
+      "change": "added",
+      "bytes": 21010,
+      "sha256": "470f28846162201cf38432689338a7adde25c8271bf3a6144c89b0c047647b12"
+    },
+    {
+      "path": "backend/games/demo/assets/lumen/scene-1.webp",
+      "change": "added",
+      "bytes": 25538,
+      "sha256": "614ae860901cf0d765115cefa2039ef5d5f1aaf65a7e0531fbaa75a739b314a0"
+    },
+    {
+      "path": "backend/games/demo/assets/lumen/scene-2.webp",
+      "change": "added",
+      "bytes": 24142,
+      "sha256": "8e1da410c3ed7e93f5f1728f1ea91c2984bbcdf112d0ed9ff252267ecbdda8aa"
+    },
+    {
+      "path": "backend/games/demo/assets/lumen/scene-3.webp",
+      "change": "added",
+      "bytes": 26946,
+      "sha256": "4c7a725156c9b388474f7262a3a37b02a77f9e9cfaf0f9fa5dc3bbd0cfe5fc61"
+    },
+    {
+      "path": "backend/games/demo/assets/northstar/cover.webp",
+      "change": "added",
+      "bytes": 17356,
+      "sha256": "91dde72e5f5b159ae3e08c0c5b1bf2699e86c4e44b599192a6964c7203414a74"
+    },
+    {
+      "path": "backend/games/demo/assets/northstar/scene-1.webp",
+      "change": "added",
+      "bytes": 18400,
+      "sha256": "e07bbff4650e04f5e9ed369d00e5d235175421c0cb94bcdf7db418ace4f2cfe7"
+    },
+    {
+      "path": "backend/games/demo/assets/northstar/scene-2.webp",
+      "change": "added",
+      "bytes": 19082,
+      "sha256": "6d3dda77f1db0492f5d6c555302bc52d9d62d14bf06b5f2af31617cbb82699ea"
+    },
+    {
+      "path": "backend/games/demo/assets/northstar/scene-3.webp",
+      "change": "added",
+      "bytes": 20020,
+      "sha256": "44aac8cf0c44d3589593175ec766d46ebae8abb0725e9b8e677c89ae4162a6ff"
+    },
+    {
+      "path": "backend/games/demo/assets/orbitfall/cover.webp",
+      "change": "added",
+      "bytes": 12048,
+      "sha256": "84d0de772c58b0ecc35c3dcde22a4c8e93e5342e889da17dc21c364af7c8ec12"
+    },
+    {
+      "path": "backend/games/demo/assets/orbitfall/scene-1.webp",
+      "change": "added",
+      "bytes": 16740,
+      "sha256": "bfecc8ff3c18683a51848a83f180f27b2754e1a40c5fe379cd47a4f17850530d"
+    },
+    {
+      "path": "backend/games/demo/assets/orbitfall/scene-2.webp",
+      "change": "added",
+      "bytes": 16598,
+      "sha256": "f8889b7be4f154339c3e199e2a887b3baae39db28addeaf1a604d06f7c4c3a6d"
+    },
+    {
+      "path": "backend/games/demo/assets/orbitfall/scene-3.webp",
+      "change": "added",
+      "bytes": 15576,
+      "sha256": "02c860076d00cff737547396eb8937ac973eba7445b07fdb2c4064f963defc8c"
+    },
+    {
+      "path": "backend/games/demo/assets/paper-trails/cover.webp",
+      "change": "added",
+      "bytes": 24828,
+      "sha256": "5788977deeedd3f8902025506b82ea6c00506d04893f8aab1361627ca325b85d"
+    },
+    {
+      "path": "backend/games/demo/assets/paper-trails/scene-1.webp",
+      "change": "added",
+      "bytes": 28756,
+      "sha256": "0d150868a906ea400c1ef8d22842c2f51c4b947b7fa2026da6127e568df0b878"
+    },
+    {
+      "path": "backend/games/demo/assets/paper-trails/scene-2.webp",
+      "change": "added",
+      "bytes": 30152,
+      "sha256": "6b37861f277e2aa2c463bd01dfb08314adbfa99f507cb0290ebb85b892b21113"
+    },
+    {
+      "path": "backend/games/demo/assets/paper-trails/scene-3.webp",
+      "change": "added",
+      "bytes": 31118,
+      "sha256": "1ceed2224c5048ee5a556f8e0c6e57ad9bfa733e7f1e6d9c4588b8363a1f4e8a"
+    },
+    {
+      "path": "backend/games/demo/assets/sunward/cover.webp",
+      "change": "added",
+      "bytes": 25516,
+      "sha256": "69a61b1f4423d982ee64cc611734fa4a91dbf1e1483664638243b97773fe7d83"
+    },
+    {
+      "path": "backend/games/demo/assets/sunward/scene-1.webp",
+      "change": "added",
+      "bytes": 27276,
+      "sha256": "a1811143bc32832a8d2e26e4b9e5d864a008447e0cd4216d9ef298a289a74d1b"
+    },
+    {
+      "path": "backend/games/demo/assets/sunward/scene-2.webp",
+      "change": "added",
+      "bytes": 27956,
+      "sha256": "8732a36b31af8436f0e22fca649b29a32af5c09cb72781f33217f82ab517c49c"
+    },
+    {
+      "path": "backend/games/demo/assets/sunward/scene-3.webp",
+      "change": "added",
+      "bytes": 29374,
+      "sha256": "3cb3c76125b856cbd0630c7fa6b70f2e176b5366cdfa3f78695b1b857213cf37"
+    },
+    {
+      "path": "backend/games/demo/assets/wildwood/cover.webp",
+      "change": "added",
+      "bytes": 22820,
+      "sha256": "fca892443f28139a588733bf23574881f1af53ade7c7c49f46100b2cbcd56bb5"
+    },
+    {
+      "path": "backend/games/demo/assets/wildwood/scene-1.webp",
+      "change": "added",
+      "bytes": 25102,
+      "sha256": "e31da35b59e9a57a1871791e6a7853049b1952c81d745bd8e7eaeeeac02e4d6d"
+    },
+    {
+      "path": "backend/games/demo/assets/wildwood/scene-2.webp",
+      "change": "added",
+      "bytes": 24162,
+      "sha256": "c2ce1a41f668dd642d98a440b41209e7be3af8cd0877172facf50b46e03411b0"
+    },
+    {
+      "path": "backend/games/demo/assets/wildwood/scene-3.webp",
+      "change": "added",
+      "bytes": 26358,
+      "sha256": "d075e49a9db8f01e1edf4173ec6931dff109ee9609785ceb3f8b7640b78f02fe"
+    },
+    {
+      "path": "backend/games/demo/catalog.json",
+      "change": "added",
+      "bytes": 12723,
+      "sha256": "b8edaa0af4babacccf934a04cc1ad4f26185ec0b08054697b57fcea72c765dd4"
+    },
+    {
+      "path": "backend/games/management/__init__.py",
+      "change": "added",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/games/management/commands/__init__.py",
+      "change": "added",
+      "bytes": 0,
+      "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855"
+    },
+    {
+      "path": "backend/games/management/commands/seed_store_demo.py",
+      "change": "added",
+      "bytes": 4685,
+      "sha256": "cd14f8270d7adc7ffb32b9932c0dd483b5b187403f0aadaaecc48cd2d74e0589"
+    },
+    {
+      "path": "backend/games/migrations/0003_gamescreenshot.py",
+      "change": "added",
+      "bytes": 1156,
+      "sha256": "98b424ee4cf69489730fa685be3a5740d8cc2036a8f9d6783cb12dc3be486aa9"
+    },
+    {
+      "path": "backend/games/models.py",
+      "change": "modified",
+      "bytes": 3262,
+      "sha256": "47c779f253e8f97d93176ca53c8b5c90e2957737a9eef3d628e10841d2072b85"
+    },
+    {
+      "path": "backend/games/serializers.py",
+      "change": "modified",
+      "bytes": 2132,
+      "sha256": "ded7fcf209c5ed6136573845d15e91885f12d4f3c6ca92867156041dce194158"
+    },
+    {
+      "path": "backend/games/test_demo_catalog.py",
+      "change": "added",
+      "bytes": 6733,
+      "sha256": "1b244ec1967d5866ffccf6245ceb05403db8ae627e1c840c6d04215036fb6b85"
+    },
+    {
+      "path": "backend/games/test_ownership_api.py",
+      "change": "added",
+      "bytes": 2902,
+      "sha256": "f6c99fb4c4ebd755670a8ae37bb6c57d52552d6bc305c7f3ef89be385b344ba0"
+    },
+    {
+      "path": "backend/games/tests.py",
+      "change": "modified",
+      "bytes": 15881,
+      "sha256": "465aa11b5281ace721285975324bc322c914cda56a3ce048f43846f0766bcc3d"
+    },
+    {
+      "path": "backend/games/views.py",
+      "change": "modified",
+      "bytes": 2237,
+      "sha256": "3777115efcd1efb7bd9538d283cea8bb431265d9bf37d589512c011c4b5382da"
+    },
+    {
+      "path": "backend/store/services.py",
+      "change": "modified",
+      "bytes": 3600,
+      "sha256": "1d032b35fbfcb5b182d6f42631a9ff16f55a8ca832ea37f182d871dd1dd9b779"
+    },
+    {
+      "path": "backend/store/test_cart_ownership.py",
+      "change": "added",
+      "bytes": 1836,
+      "sha256": "16819b31992d8c5e3cf4ad569b6cc73a86769241a736f6bc8fdc77e1a509ad0f"
+    },
+    {
+      "path": "backend/store/test_checkout.py",
+      "change": "modified",
+      "bytes": 14956,
+      "sha256": "fd4409af8d675e086aee6340eb2bc387dd1c8d4b9d168c07a1ef61c177210864"
+    },
+    {
+      "path": "backend/store/test_checkout_integration.py",
+      "change": "modified",
+      "bytes": 6810,
+      "sha256": "11cdffff76cbc1e05b4c681b816d8db1098859ffa06cc7d7e812875e090f098d"
+    },
+    {
+      "path": "backend/store/views.py",
+      "change": "modified",
+      "bytes": 9345,
+      "sha256": "99f1da49617fbc29aa22379558f55cae24fe54cad485089b2494e7f0d399ee61"
+    },
+    {
+      "path": "frontend/public/fonts/OFL.txt",
+      "change": "added",
+      "bytes": 11357,
+      "sha256": "c71d239df91726fc519c6eb72d318ec65820627232b2f796219e87dcf35d0ab4"
+    },
+    {
+      "path": "frontend/public/fonts/noto-sans-variable.woff",
+      "change": "added",
+      "bytes": 343700,
+      "sha256": "52c6006fc57cba5523553f03a81b4b0022968aacb6df9ea443203778d241345f"
+    },
+    {
+      "path": "frontend/src/App.jsx",
+      "change": "modified",
+      "bytes": 2227,
+      "sha256": "91eb86abb94a3682f5e0ef9291dd5b4e9f333ca3e23e9bdd0b6334e0bf02009a"
+    },
+    {
+      "path": "frontend/src/api/games.js",
+      "change": "modified",
+      "bytes": 1147,
+      "sha256": "ddfe8b8d3fa40b59bcd711b46d23336c77b028c4a55526c1b8c55dd3f7bbe752"
+    },
+    {
+      "path": "frontend/src/api/library.js",
+      "change": "modified",
+      "bytes": 3868,
+      "sha256": "5c0b18f938fbce7c180d5d61e96964755ec898ef35ba0214e0c904fd5111759d"
+    },
+    {
+      "path": "frontend/src/api/wishlist.js",
+      "change": "added",
+      "bytes": 879,
+      "sha256": "a878da8c9c9f5119968612d142e77478b0b023e4fd1862aab76178a374552716"
+    },
+    {
+      "path": "frontend/src/components/GameCard.jsx",
+      "change": "modified",
+      "bytes": 3288,
+      "sha256": "6a1a2f46e810f005eb20baceca08baed9e86d850a30f43f23779f68795e26f87"
+    },
+    {
+      "path": "frontend/src/components/GameImage.jsx",
+      "change": "added",
+      "bytes": 1001,
+      "sha256": "f785454e89687d07ca7986125b59004a37b19b5ee3e4f9a917b063317239fa4f"
+    },
+    {
+      "path": "frontend/src/components/Header.jsx",
+      "change": "modified",
+      "bytes": 5700,
+      "sha256": "cb92a9acc81ea2768c3de3704884744cfaf8634aafa1791c6c3569995c386c44"
+    },
+    {
+      "path": "frontend/src/components/MediaGallery.jsx",
+      "change": "added",
+      "bytes": 2388,
+      "sha256": "575ab4830628f3a3c9f4da3ac6fac36240a6163610bcfaf5a2f9410ce16b0bce"
+    },
+    {
+      "path": "frontend/src/components/StoreToolbar.jsx",
+      "change": "added",
+      "bytes": 1912,
+      "sha256": "c3ea3ef01474a1c0e2d01928adc0c7b8b780db30fbd6461c97300725ccde3d53"
+    },
+    {
+      "path": "frontend/src/components/ViewModeToggle.jsx",
+      "change": "added",
+      "bytes": 1237,
+      "sha256": "6929db3aa71f7c171b29574130654fac8b2e452a8f54402a18788ff8f11e1c22"
+    },
+    {
+      "path": "frontend/src/components/WishlistToggleButton.jsx",
+      "change": "added",
+      "bytes": 3136,
+      "sha256": "170cc5c406024f71e718852f25a0f5869126009090b8e8d55cdfb6cf376e1532"
+    },
+    {
+      "path": "frontend/src/components/library/LibraryFrame.jsx",
+      "change": "modified",
+      "bytes": 556,
+      "sha256": "a82ae1cc1f7bbd6008c9391ecd4a8f747fd5d35f887342fc6e8f4a957ebbb54d"
+    },
+    {
+      "path": "frontend/src/context/WishlistContext.jsx",
+      "change": "added",
+      "bytes": 8840,
+      "sha256": "2f14b6335eae276320d983930e78bc033ebbb9199cb534223143a1d9130d0ed0"
+    },
+    {
+      "path": "frontend/src/context/WishlistContextValue.js",
+      "change": "added",
+      "bytes": 128,
+      "sha256": "c936ce2475a82201d40f53d4aa8014e30ac4b901417e560563d2ec079af02d24"
+    },
+    {
+      "path": "frontend/src/hooks/useModalFocus.js",
+      "change": "added",
+      "bytes": 1711,
+      "sha256": "c0537b873b25bb64549c312f7e22eb2d626ed6489e455dd2d3749878c268731e"
+    },
+    {
+      "path": "frontend/src/hooks/useWishlist.js",
+      "change": "added",
+      "bytes": 311,
+      "sha256": "425bf309d120e6aeb53f6b0b41dc77ab66ef7ce9ae017f7edef64d9999c784c5"
+    },
+    {
+      "path": "frontend/src/index.css",
+      "change": "modified",
+      "bytes": 932,
+      "sha256": "fe71c127e7dd8893bccba5d03f21012b90e6e9ab0ffa7262903e49873ee657c2"
+    },
+    {
+      "path": "frontend/src/main.jsx",
+      "change": "modified",
+      "bytes": 558,
+      "sha256": "cb21a750e6bebb7fa12fa2e49d4727a1ee61ee7e513affaacfb56ec11590319a"
+    },
+    {
+      "path": "frontend/src/pages/CartPage.jsx",
+      "change": "modified",
+      "bytes": 5817,
+      "sha256": "989924b2a6c71444e74c0c6fec9ef0f12f09d320ab937b55d27450170a104c2a"
+    },
+    {
+      "path": "frontend/src/pages/CatalogPage.jsx",
+      "change": "modified",
+      "bytes": 5711,
+      "sha256": "55e818ccb7e35bae07e02c60f2f10e2b05fcc1a01fd17f6593e31bb37976c94e"
+    },
+    {
+      "path": "frontend/src/pages/CheckoutPage.jsx",
+      "change": "modified",
+      "bytes": 9255,
+      "sha256": "ac64355e53b3358b06f7e19c38ea389d129533425b37b45d9a101c5e6a814b6f"
+    },
+    {
+      "path": "frontend/src/pages/GameDetailsPage.jsx",
+      "change": "modified",
+      "bytes": 12226,
+      "sha256": "b536ee80dcb1ced3ffdab6a549fe0472d30188d75f17fe43d6bde3edbf64bbed"
+    },
+    {
+      "path": "frontend/src/pages/HomePage.jsx",
+      "change": "modified",
+      "bytes": 7027,
+      "sha256": "c1de25435d98ac5abf04da52a3503d25f4480f17036f16b621ef9b427d6a261b"
+    },
+    {
+      "path": "frontend/src/pages/LibraryFeedPage.jsx",
+      "change": "modified",
+      "bytes": 7975,
+      "sha256": "b6c1bc4600f0c60e9fd41d3adb2b316f7590a408f21c30779d3c4a7b3a5364ef"
+    },
+    {
+      "path": "frontend/src/pages/LibraryGamePage.jsx",
+      "change": "modified",
+      "bytes": 17499,
+      "sha256": "e82fba826cd4b118a55dbac7833c32aa2a74be0edaea97547a82392d7a153eae"
+    },
+    {
+      "path": "frontend/src/pages/LibraryPage.jsx",
+      "change": "modified",
+      "bytes": 23710,
+      "sha256": "af57ade8ccf6d9e0c76ca3cff7d5139ce1c68fa319d9dfe2061e9f7fcacd39be"
+    },
+    {
+      "path": "frontend/src/pages/ProfilePage.jsx",
+      "change": "modified",
+      "bytes": 36038,
+      "sha256": "444f672ff9e5261652e8413a82656c9d458aeb20a0a8abb3736b3888c739f15c"
+    },
+    {
+      "path": "frontend/src/pages/SettingsPage.jsx",
+      "change": "modified",
+      "bytes": 855,
+      "sha256": "7573722b6957eac1c91f2fe72a127c37ef3157eca554bcdbcc2bbbb2b168f29d"
+    },
+    {
+      "path": "frontend/src/pages/WishlistPage.jsx",
+      "change": "added",
+      "bytes": 15750,
+      "sha256": "9b5bc9e8d399bc224ba7cfefb6883131a9efc497310f7b0cf6706a7af3583889"
+    },
+    {
+      "path": "frontend/src/static/styles/cta.css",
+      "change": "modified",
+      "bytes": 1,
+      "sha256": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b"
+    },
+    {
+      "path": "frontend/src/static/styles/game-details.css",
+      "change": "modified",
+      "bytes": 11499,
+      "sha256": "c0d5935cd6a10d411bfcb11040ffdac4e62de0c76dd697aeb572cc1456bd59a9"
+    },
+    {
+      "path": "frontend/src/static/styles/library-refresh.css",
+      "change": "added",
+      "bytes": 12983,
+      "sha256": "ba30924a288acb26b083fe04bff6efd47b91bac05e52bbf0210536de37eaa043"
+    },
+    {
+      "path": "frontend/src/static/styles/library.css",
+      "change": "modified",
+      "bytes": 37004,
+      "sha256": "2d6c84f7a1bf1d1dcc3740d8de8c6168e643b48cec5db195c671209125f06f46"
+    },
+    {
+      "path": "frontend/src/static/styles/polish.css",
+      "change": "modified",
+      "bytes": 33094,
+      "sha256": "4bceb949f7e9cd87322583e091d1131120354ba456a4b7062de38a94fdcc593a"
+    },
+    {
+      "path": "frontend/src/static/styles/profile.css",
+      "change": "modified",
+      "bytes": 23031,
+      "sha256": "9159fa81604991f4fa09ac3f4082262dc37be78a3094fa4849de1c3153086173"
+    },
+    {
+      "path": "frontend/src/static/styles/responsive.css",
+      "change": "modified",
+      "bytes": 3121,
+      "sha256": "db294e33c96bd132898c60a18c19124f7278e44ecaa74196dcbb6025f17b4985"
+    },
+    {
+      "path": "frontend/src/static/styles/store-ui.css",
+      "change": "added",
+      "bytes": 29971,
+      "sha256": "480e20c6ac0081982337be4f56246a59552b844b2efcd59c04a2092a764be788"
+    },
+    {
+      "path": "frontend/src/static/styles/v5-refresh.css",
+      "change": "added",
+      "bytes": 7785,
+      "sha256": "39c4974e6e6f70d9d901c7e1dd0def1acbbebf98cfa80f0f6916e330681fd7e2"
+    },
+    {
+      "path": "frontend/src/static/styles/v6-refresh.css",
+      "change": "added",
+      "bytes": 5684,
+      "sha256": "8f76848a72affa0f2562321dd7ac55d4c1dfa27e57ba706450ec2c17c37d8e22"
+    },
+    {
+      "path": "frontend/src/static/styles/wishlist.css",
+      "change": "added",
+      "bytes": 25657,
+      "sha256": "0b002d0b065fc6112f4ac6bf63f6e460943c829c7c6b2f75889a1aacfab865fd"
+    }
+  ]
+}

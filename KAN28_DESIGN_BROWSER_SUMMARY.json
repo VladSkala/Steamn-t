@@ -1,0 +1,15 @@
+{
+  "completed": 126,
+  "passed": 126,
+  "failed": 0,
+  "planned": 126,
+  "widths": [
+    320,
+    390,
+    700,
+    820,
+    1024,
+    1440
+  ],
+  "failed_cases": []
+}

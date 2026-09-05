@@ -1,9 +1,12 @@
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
-from django.db import models
+from django.core.validators import FileExtensionValidator, MaxValueValidator, MinValueValidator
+from django.db import models, transaction
+from django.db.models.signals import post_delete
+from django.dispatch import receiver
 from django.db.models import F, Q
 
 from core.models import TimeStampedModel
+from core.validators import validate_image_size
 from games.models import Game
 
 
@@ -147,6 +150,35 @@ class UserFollow(TimeStampedModel):
                 name="prevent_self_follow",
             ),
         ]
+
+
+class GameReviewImage(TimeStampedModel):
+    review = models.ForeignKey(GameReview, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(
+        upload_to="reviews/%Y/%m/",
+        validators=[
+            FileExtensionValidator(allowed_extensions=("jpg", "jpeg", "png", "webp")),
+            validate_image_size,
+        ],
+    )
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ("position", "created_at", "pk")
+        indexes = [
+            models.Index(fields=("review", "position"), name="review_image_position_idx")
+        ]
+
+    def __str__(self):
+        return f"Review image {self.pk} for review {self.review_id}"
+
+
+@receiver(post_delete, sender=GameReviewImage)
+def delete_review_image_file(sender, instance, **kwargs):
+    if instance.image:
+        storage = instance.image.storage
+        name = instance.image.name
+        transaction.on_commit(lambda: storage.delete(name))
 
 
 class GameWishlist(TimeStampedModel):

@@ -1,0 +1,182 @@
+[
+  {
+    "slug": "aether-drift",
+    "title": "Aether Drift",
+    "theme": "space",
+    "price": "24.99",
+    "genres": [
+      "Adventure",
+      "Exploration"
+    ],
+    "release_date": "2026-05-22",
+    "disk_size_gb": "24",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Pilot a courier ship through a fractured constellation. Every route is a choice between a faster delivery and a world worth exploring.\n\nChart routes between drifting observatories, repair your ship and uncover the story of a vanished expedition. An exploration adventure built around navigation, discovery and the freedom to take the long way home.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 24 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 24 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "afterlight",
+    "title": "Afterlight",
+    "theme": "city",
+    "price": "19.99",
+    "genres": [
+      "Action",
+      "Adventure"
+    ],
+    "release_date": "2026-08-14",
+    "disk_size_gb": "32",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Race the last train through a rain-soaked city where the power never stays on for long.\n\nFollow rooftop routes, time your movement through shifting city blocks and recover the recordings that connect its districts. Short missions reward careful observation as much as speed.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 32 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 32 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "cinderbound",
+    "title": "Cinderbound",
+    "theme": "desert",
+    "price": "29.99",
+    "genres": [
+      "RPG",
+      "Adventure"
+    ],
+    "release_date": "2026-03-06",
+    "disk_size_gb": "28",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Cross a sea of red dunes in search of the last city that remembers your name.\n\nBuild a small traveling party, explore buried halls and choose how to spend a dwindling supply of water. Routes and conversations offer different solutions; preparation matters more than equipment rarity.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 28 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 28 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "deep-current",
+    "title": "Deep Current",
+    "theme": "ocean",
+    "price": "14.99",
+    "genres": [
+      "Exploration",
+      "Simulation"
+    ],
+    "release_date": "2025-11-21",
+    "disk_size_gb": "12",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Dive beneath the surface and map a living ocean, one careful descent at a time.\n\nPlan expeditions from a compact research vessel, observe unfamiliar sea life and maintain your equipment between dives. Open environments and environmental puzzles create a slower, deliberate exploration experience.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 12 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 12 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "hollow-vale",
+    "title": "Hollow Vale",
+    "theme": "forest",
+    "price": "17.99",
+    "genres": [
+      "Adventure",
+      "Puzzle"
+    ],
+    "release_date": "2026-06-12",
+    "disk_size_gb": "8",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Follow a trail of lanterns into a forest where paths change after sunset.\n\nRead the landscape, restore forgotten shrines and solve linked environmental puzzles. Explore at your own pace; the story is told through the places you visit and the traces left by earlier travelers.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 8 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 8 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "iron-meridian",
+    "title": "Iron Meridian",
+    "theme": "city",
+    "price": "34.99",
+    "genres": [
+      "Strategy",
+      "Simulation"
+    ],
+    "release_date": "2026-02-20",
+    "disk_size_gb": "40",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Build a resilient transport network in a city that grows around every decision you make.\n\nConnect stations, manage limited power and balance the needs of distinct neighborhoods. Each scenario introduces a new logistical constraint, with clear systems and room for experimentation.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 40 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 40 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "lumen",
+    "title": "Lumen",
+    "theme": "forest",
+    "price": "0.00",
+    "genres": [
+      "Puzzle",
+      "Casual"
+    ],
+    "release_date": "2025-09-05",
+    "disk_size_gb": "2",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Guide a small light through a series of quiet, hand-shaped landscapes.\n\nRedirect beams, combine simple mechanisms and find hidden passages in compact puzzle spaces. Short chapters make it easy to explore a little at a time.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 2 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 2 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "northstar",
+    "title": "Northstar",
+    "theme": "snow",
+    "price": "9.99",
+    "genres": [
+      "Adventure",
+      "Exploration"
+    ],
+    "release_date": "2026-01-16",
+    "disk_size_gb": "10",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Find your way across an abandoned polar research station before the next storm arrives.\n\nUse landmarks and instruments rather than a constant waypoint. Restore shelter, gather supplies and piece together the station log across a connected winter landscape.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 10 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 10 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "orbitfall",
+    "title": "Orbitfall",
+    "theme": "space",
+    "price": "0.00",
+    "genres": [
+      "Strategy",
+      "Simulation"
+    ],
+    "release_date": "2026-07-24",
+    "disk_size_gb": "6",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Bring a damaged orbital outpost back online without losing the systems that still work.\n\nBalance power, oxygen and crew tasks in compact scenarios. Pause to plan a solution, then watch your decisions play out across a carefully interconnected station.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 6 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 6 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "paper-trails",
+    "title": "Paper Trails",
+    "theme": "desert",
+    "price": "7.99",
+    "genres": [
+      "Puzzle",
+      "Casual"
+    ],
+    "release_date": "2025-12-12",
+    "disk_size_gb": "3",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Unfold a handmade world of winding roads, hidden courtyards and small discoveries.\n\nRotate and connect pieces of a miniature landscape to help a traveler reach the next village. Each chapter introduces one new idea without timers or penalties for experimentation.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 3 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 3 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "sunward",
+    "title": "Sunward",
+    "theme": "ocean",
+    "price": "12.99",
+    "genres": [
+      "Exploration",
+      "Casual"
+    ],
+    "release_date": "2026-08-28",
+    "disk_size_gb": "7",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Sail between sunlit islands, restore an old boat and choose your next horizon.\n\nCollect materials, learn the coastline and help isolated settlements reconnect. A compact open-water adventure with a focus on travel rather than combat.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 7 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 7 GB available space\n\nIllustrative requirements for this fictional demo title."
+  },
+  {
+    "slug": "wildwood",
+    "title": "Wildwood",
+    "theme": "forest",
+    "price": "0.00",
+    "genres": [
+      "Simulation",
+      "Casual"
+    ],
+    "release_date": "2026-04-10",
+    "disk_size_gb": "5",
+    "developer": "Steamn’t Demo Studio",
+    "description": "Turn an overgrown clearing into a small woodland garden.\n\nArrange paths, plant seasonal crops and observe how the surrounding forest changes. Flexible goals and a readable environment keep the experience relaxed and approachable.\n\nDemo catalog entry: a fictional game with original concept artwork, not a commercial release or a playable download.",
+    "requirements": "Minimum\nOS: Windows 10 (64-bit)\nProcessor: Dual-core 2.5 GHz\nMemory: 8 GB RAM\nGraphics: 2 GB dedicated memory\nStorage: 5 GB available space\n\nRecommended\nOS: Windows 11 (64-bit)\nProcessor: Quad-core 3.0 GHz\nMemory: 16 GB RAM\nGraphics: 4 GB dedicated memory\nStorage: 5 GB available space\n\nIllustrative requirements for this fictional demo title."
+  }
+]

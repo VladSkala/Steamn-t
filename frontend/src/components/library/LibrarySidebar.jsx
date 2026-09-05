@@ -1,11 +1,14 @@
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink } from "react-router-dom";
 
-import LibraryArtwork from './LibraryArtwork'
+import LibraryArtwork from "./LibraryArtwork";
 
 function LibrarySidebar({ items = [], activeGameId = null }) {
   return (
-    <aside className="library-sidebar" aria-label="Your library navigation">
-      <div className="library-sidebar-heading">
+    <aside
+      className="library-sidebar store-sidebar"
+      aria-label="Your library navigation"
+    >
+      <div className="library-sidebar-heading store-sidebar-header">
         <div>
           <span>Your library</span>
           <NavLink to="/library" end>
@@ -16,16 +19,19 @@ function LibrarySidebar({ items = [], activeGameId = null }) {
       </div>
 
       {items.length > 0 ? (
-        <nav className="library-sidebar-list" aria-label="Owned games">
+        <nav
+          className="library-sidebar-list store-sidebar-section"
+          aria-label="Owned games"
+        >
           {items.map((item) => {
-            const game = item.game ?? {}
-            const title = game.title?.trim() || 'Untitled game'
-            const isActive = String(game.id) === String(activeGameId)
+            const game = item.game ?? {};
+            const title = game.title?.trim() || "Untitled game";
+            const isActive = String(game.id) === String(activeGameId);
 
             return (
               <Link
                 to={`/library/games/${game.id}`}
-                className={`library-sidebar-game${isActive ? ' active' : ''}`}
+                className={`library-sidebar-game store-sidebar-row${isActive ? " active" : ""}`}
                 key={item.id}
                 aria-label={`Open ${title}`}
               >
@@ -35,7 +41,7 @@ function LibrarySidebar({ items = [], activeGameId = null }) {
                 />
                 <span>{title}</span>
               </Link>
-            )
+            );
           })}
         </nav>
       ) : (
@@ -44,12 +50,15 @@ function LibrarySidebar({ items = [], activeGameId = null }) {
         </p>
       )}
 
-      <NavLink className="library-sidebar-feed" to="/library/feed">
+      <NavLink
+        className="library-sidebar-feed store-sidebar-footer"
+        to="/library/feed"
+      >
         <span aria-hidden="true">◎</span>
         My feed
       </NavLink>
     </aside>
-  )
+  );
 }
 
-export default LibrarySidebar
+export default LibrarySidebar;

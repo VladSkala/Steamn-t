@@ -1,7 +1,16 @@
 from django.contrib import admin
+from games.models import Game, GameScreenshot, Genre
 
-from games.models import Game, Genre
+class GameScreenshotInline(admin.TabularInline):
+    model = GameScreenshot
+    fields = ("image", "caption", "position")
+    extra = 0
 
+@admin.register(Game)
+class GameAdmin(admin.ModelAdmin):
+    list_display = ("title", "developer", "price", "release_date")
+    search_fields = ("title", "developer")
+    filter_horizontal = ("genres",)
+    inlines = (GameScreenshotInline,)
 
-admin.site.register(Game)
 admin.site.register(Genre)

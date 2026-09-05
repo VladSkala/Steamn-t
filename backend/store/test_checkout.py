@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from community.models import GameWishlist
 from games.models import Game
 from store.models import Cart, CartItem, LibraryItem, Order, OrderItem
 
@@ -202,6 +203,35 @@ class CheckoutAPITests(APITestCase):
         )
         self.assertTrue(all(item.order_id == order.pk for item in library_items))
 
+    def test_checkout_removes_only_purchased_games_from_the_users_wishlist(self):
+        purchased_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.game,
+        )
+        retained_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.second_game,
+        )
+        other_users_item = GameWishlist.objects.create(
+            user=self.other_user,
+            game=self.game,
+        )
+        self.fill_cart(self.user, self.game)
+        self.authenticate()
+
+        response = self.client.post(self.checkout_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertFalse(
+            GameWishlist.objects.filter(pk=purchased_item.pk).exists(),
+        )
+        self.assertTrue(
+            GameWishlist.objects.filter(pk=retained_item.pk).exists(),
+        )
+        self.assertTrue(
+            GameWishlist.objects.filter(pk=other_users_item.pk).exists(),
+        )
+
     def test_checkout_keeps_purchase_prices_after_catalog_price_changes(self):
         self.fill_cart(self.user, self.game)
         self.authenticate()
@@ -218,6 +248,10 @@ class CheckoutAPITests(APITestCase):
 
     def test_checkout_rejects_an_already_owned_game_and_keeps_cart(self):
         existing_order = self.grant_purchase(self.user, self.game)
+        wishlist_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.game,
+        )
         cart = self.fill_cart(self.user, self.game)
         self.authenticate()
 
@@ -229,6 +263,9 @@ class CheckoutAPITests(APITestCase):
         self.assertEqual(Order.objects.count(), 1)
         self.assertTrue(Order.objects.filter(pk=existing_order.pk).exists())
         self.assertTrue(CartItem.objects.filter(cart=cart, game=self.game).exists())
+        self.assertTrue(
+            GameWishlist.objects.filter(pk=wishlist_item.pk).exists(),
+        )
 
     def test_checkout_rejects_the_whole_mixed_cart_when_one_game_is_owned(self):
         self.grant_purchase(self.user, self.game)
@@ -310,6 +347,10 @@ class CheckoutAPITests(APITestCase):
 
     def test_integrity_error_rolls_back_order_items_library_and_cart_cleanup(self):
         cart = self.fill_cart(self.user, self.game)
+        wishlist_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.game,
+        )
         self.authenticate()
 
         with patch(
@@ -324,6 +365,9 @@ class CheckoutAPITests(APITestCase):
         self.assertFalse(OrderItem.objects.exists())
         self.assertFalse(LibraryItem.objects.exists())
         self.assertTrue(CartItem.objects.filter(cart=cart, game=self.game).exists())
+        self.assertTrue(
+            GameWishlist.objects.filter(pk=wishlist_item.pk).exists(),
+        )
 
     def test_zero_price_game_can_be_checked_out(self):
         free_game = Game.objects.create(

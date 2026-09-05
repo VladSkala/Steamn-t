@@ -1,222 +1,229 @@
-import { useRef } from 'react'
-import { Link } from 'react-router-dom'
+import { useState } from "react";
+import { Link } from "react-router-dom";
 
-import CatalogFeedback from '../components/CatalogFeedback'
-import GameCard from '../components/GameCard'
-import useCatalogData from '../hooks/useCatalogData'
+import CatalogFeedback from "../components/CatalogFeedback";
+import GameCard from "../components/GameCard";
+import GameImage from "../components/GameImage";
+import useCatalogData from "../hooks/useCatalogData";
 
-function GameSection({ title, games }) {
-  const sliderRef = useRef(null)
+const money = (price) =>
+  Number(price) === 0
+    ? "Free"
+    : new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: "USD",
+      }).format(Number(price));
 
-  const scrollGames = (direction) => {
-    const slider = sliderRef.current
-
-    if (!slider) {
-      return
-    }
-
-    const firstCard = slider.querySelector('.game-card')
-    const gap = 18
-    const amount = firstCard
-      ? firstCard.getBoundingClientRect().width + gap
-      : slider.clientWidth * 0.85
-
-    slider.scrollBy({
-      left: direction * amount,
-      behavior: 'smooth',
-    })
-  }
-
+function FeaturedCarousel({ games }) {
+  const [index, setIndex] = useState(0);
+  const active = index % games.length;
+  const game = games[active];
+  const select = (offset) =>
+    setIndex((current) => (current + offset + games.length) % games.length);
   return (
-    <section className="game-section" aria-labelledby="home-catalog-heading">
-      <div className="section-heading">
-        <div>
-          <p className="section-kicker">
-            DISCOVER
-          </p>
-
-          <h2 id="home-catalog-heading">{title}</h2>
+    <section
+      className="store-featured"
+      aria-label="Featured games"
+      aria-roledescription="carousel"
+    >
+      <div className="store-featured-slide">
+        <GameImage
+          src={game.cover}
+          alt={`Artwork for ${game.title}`}
+          priority
+        />
+        <div className="store-featured-shade" aria-hidden="true" />
+        <div className="store-featured-copy" aria-live="polite">
+          <span className="store-eyebrow">Featured game</span>
+          <h1>{game.title}</h1>
+          <p>{game.description?.split("\n").find((line) => line.trim())}</p>
+          <div className="store-featured-actions">
+            <Link className="primary-button" to={`/games/${game.id}`}>
+              View game <span aria-hidden="true">↗</span>
+            </Link>
+            <span className="store-featured-price">
+              {game.is_owned ? "In your Library" : money(game.price)}
+            </span>
+          </div>
         </div>
-
-        <div className="section-actions">
-          {games.length > 1 && (
-            <div className="slider-controls">
-              <button
-                type="button"
-                className="slider-button"
-                aria-label={`Previous games in ${title}`}
-                onClick={() => scrollGames(-1)}
-              >
-                ←
-              </button>
-
-              <button
-                type="button"
-                className="slider-button"
-                aria-label={`Next games in ${title}`}
-                onClick={() => scrollGames(1)}
-              >
-                →
-              </button>
-            </div>
-          )}
-
-          <Link to="/catalog" className="section-link">
-            View all
-            <span>→</span>
-          </Link>
-        </div>
+        {games.length > 1 && (
+          <div className="store-featured-arrows">
+            <button
+              type="button"
+              onClick={() => select(-1)}
+              aria-label="Previous featured game"
+            >
+              ←
+            </button>
+            <span>
+              {active + 1} / {games.length}
+            </span>
+            <button
+              type="button"
+              onClick={() => select(1)}
+              aria-label="Next featured game"
+            >
+              →
+            </button>
+          </div>
+        )}
       </div>
+      {games.length > 1 && (
+        <div
+          className="store-featured-thumbs"
+          aria-label="Choose a featured game"
+        >
+          {games.map((item, itemIndex) => (
+            <button
+              type="button"
+              key={item.id}
+              aria-label={`Feature ${item.title}`}
+              aria-pressed={itemIndex === active}
+              className={itemIndex === active ? "active" : ""}
+              onClick={() => setIndex(itemIndex)}
+            >
+              <GameImage src={item.cover} alt="" />
+              <span>{item.title}</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
 
-      <div ref={sliderRef} className="games-slider">
+function Shelf({ title, games, wide = false }) {
+  if (!games.length) return null;
+  return (
+    <section className={`store-shelf${wide ? " is-wide" : ""}`}>
+      <div className="store-section-heading">
+        <h2>{title}</h2>
+        <Link to="/catalog">
+          View all <span aria-hidden="true">→</span>
+        </Link>
+      </div>
+      <div className="store-shelf-grid">
         {games.map((game) => (
-          <GameCard
-            key={game.id}
-            game={game}
-          />
+          <GameCard key={game.id} game={game} />
         ))}
       </div>
     </section>
-  )
+  );
 }
 
-function HomePage() {
-  const { games, loading, error, retry } = useCatalogData()
-  const previewGames = games.slice(0, 12)
+function CompactColumn({ title, games }) {
+  if (!games.length) return null;
+  return (
+    <section className="store-compact-column">
+      <div className="store-section-heading">
+        <h2>{title}</h2>
+        <Link to="/catalog" aria-label={`Browse ${title.toLowerCase()}`}>
+          →
+        </Link>
+      </div>
+      {games.map((game) => (
+        <Link
+          key={game.id}
+          className="store-compact-game"
+          to={`/games/${game.id}`}
+        >
+          <GameImage src={game.cover} alt="" />
+          <div>
+            <h3>{game.title}</h3>
+            <span>
+              {game.genres
+                ?.slice(0, 2)
+                .map((genre) => genre.name)
+                .join(" · ")}
+            </span>
+            <strong>{game.is_owned ? "In Library" : money(game.price)}</strong>
+          </div>
+        </Link>
+      ))}
+    </section>
+  );
+}
+
+export default function HomePage() {
+  const { games, genres, loading, error, retry } = useCatalogData({
+    includeGenres: true,
+  });
+  const featured = [...games]
+    .sort((a, b) => Number(Boolean(b.cover)) - Number(Boolean(a.cover)))
+    .slice(0, 6);
+  const recent = [...games].sort((a, b) =>
+    String(b.release_date).localeCompare(String(a.release_date)),
+  );
+  const free = games.filter((game) => Number(game.price) === 0);
+  const budget = games
+    .filter((game) => Number(game.price) > 0 && Number(game.price) < 20)
+    .sort((a, b) => Number(a.price) - Number(b.price));
 
   return (
-    <div className="home-page">
-      <section className="hero">
-        <div className="hero-background">
-          <div className="hero-mountain hero-mountain-left" />
-          <div className="hero-mountain hero-mountain-center" />
-          <div className="hero-glow" />
-          <div className="hero-stars" />
-        </div>
-
-        <div className="hero-content">
-          <div className="hero-badge">
-            Your next favorite game is waiting
-          </div>
-
-          <h1>
-            Discover games
-            <span>worth playing.</span>
-          </h1>
-
-          <p>
-            Steamn’t is a place for discovering,
-            exploring and organizing games.
-            Find something new for your next adventure.
-          </p>
-
-          <div className="hero-actions">
-            <Link to="/catalog" className="primary-button">
-              Explore games
-              <span>→</span>
-            </Link>
-
-            <Link to="/register" className="secondary-button">
-              Join Steamn’t
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="quick-features">
-        <article className="quick-feature">
-          <div className="feature-icon">✦</div>
-          <div>
-            <h3>Discover</h3>
-            <p>
-              Find games that match your mood,
-              interests and play style.
-            </p>
-          </div>
-        </article>
-
-        <article className="quick-feature">
-          <div className="feature-icon">▣</div>
-          <div>
-            <h3>Track</h3>
-            <p>
-              Keep your gaming library organized
-              and never lose track of great titles.
-            </p>
-          </div>
-        </article>
-
-        <article className="quick-feature">
-          <div className="feature-icon">◉</div>
-          <div>
-            <h3>Play</h3>
-            <p>
-              Spend less time searching
-              and more time enjoying games.
-            </p>
-          </div>
-        </article>
-      </section>
-
-      {loading && (
+    <div className="store-home">
+      {loading ? (
         <CatalogFeedback
           kind="loading"
           title="Loading games"
-          message="Getting the catalog ready for you."
-          className="home-catalog-feedback"
+          message="Getting the store ready."
         />
-      )}
-
-      {error && (
+      ) : error ? (
         <CatalogFeedback
           kind="error"
-          title="Catalog unavailable"
+          title="Store unavailable"
           message={error}
           onRetry={retry}
-          className="home-catalog-feedback"
         />
-      )}
-
-      {!loading && !error && previewGames.length === 0 && (
+      ) : !games.length ? (
         <CatalogFeedback
           kind="empty"
-          title="The catalog is empty"
-          message="Games added to Steamn’t will appear here."
-          className="home-catalog-feedback"
+          title="The store is empty"
+          message="Games will appear here as they are added to the catalog."
         />
+      ) : (
+        <>
+          <FeaturedCarousel games={featured} />
+          <Shelf
+            title="Discover something new"
+            games={recent.slice(0, 3)}
+            wide
+          />
+          {games.length > 3 && (
+            <Shelf title="Explore the catalog" games={games.slice(3, 7)} />
+          )}
+          {budget.length > 0 && (
+            <Shelf title="Under $20" games={budget.slice(0, 4)} />
+          )}
+          {genres.length > 0 && (
+            <section
+              className="store-genres"
+              aria-labelledby="home-genres-heading"
+            >
+              <div className="store-section-heading">
+                <h2 id="home-genres-heading">Browse by genre</h2>
+              </div>
+              <div>
+                {genres.map((genre) => (
+                  <Link key={genre.id} to={`/catalog?genre=${genre.id}`}>
+                    {genre.name}
+                    <span aria-hidden="true">↗</span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+          {games.length > 3 && (
+            <div className="store-compact-columns">
+              <CompactColumn
+                title="Recent releases"
+                games={recent.slice(0, 3)}
+              />
+              <CompactColumn title="Worth a look" games={games.slice(-3)} />
+              <CompactColumn title="Free to explore" games={free.slice(0, 3)} />
+            </div>
+          )}
+        </>
       )}
-
-      {!loading && !error && previewGames.length > 0 && (
-        <GameSection
-          title="Explore the catalog"
-          games={previewGames}
-        />
-      )}
-
-      <section className="home-bottom-cta">
-        <div>
-          <span className="section-kicker">
-            YOUR LIBRARY STARTS HERE
-          </span>
-
-          <h2>
-            Find something
-            you want to play.
-          </h2>
-
-          <p>
-            Browse games, discover new genres
-            and build your personal collection.
-          </p>
-        </div>
-
-        <Link to="/catalog" className="primary-button">
-          Browse catalog
-          <span>→</span>
-        </Link>
-      </section>
     </div>
-  )
+  );
 }
-
-export default HomePage

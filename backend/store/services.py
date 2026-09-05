@@ -106,6 +106,16 @@ def checkout_user_cart(user):
     except IntegrityError as error:
         raise AlreadyOwnedGamesError(game_ids) from error
 
+    # Ownership and Wishlist cleanup must commit or roll back together. This
+    # keeps purchased games out of the personal Wishlist without risking data
+    # loss when any checkout write fails.
+    from community.models import GameWishlist
+
+    GameWishlist.objects.filter(
+        user=user,
+        game_id__in=game_ids,
+    ).delete()
+
     CartItem.objects.filter(
         pk__in=[item.pk for item in cart_items],
     ).delete()

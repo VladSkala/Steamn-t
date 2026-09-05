@@ -1,23 +1,24 @@
-import { Route, Routes } from 'react-router-dom'
+import { Route, Routes } from "react-router-dom";
 
-import ProtectedRoute from './components/ProtectedRoute'
-import AuthLayout from './layouts/AuthLayout'
-import GlobalLayout from './layouts/GlobalLayout'
-import CartPage from './pages/CartPage'
-import CatalogPage from './pages/CatalogPage'
-import CheckoutPage from './pages/CheckoutPage'
-import GameDetailsPage from './pages/GameDetailsPage'
-import HomePage from './pages/HomePage'
-import LibraryFeedPage from './pages/LibraryFeedPage'
-import LibraryGamePage from './pages/LibraryGamePage'
-import LibraryPage from './pages/LibraryPage'
-import LoginPage from './pages/LoginPage'
-import NotFoundPage from './pages/NotFoundPage'
-import ProfilePage from './pages/ProfilePage'
-import RegisterPage from './pages/RegisterPage'
-import SettingsPage from './pages/SettingsPage'
+import ProtectedRoute from "./components/ProtectedRoute";
+import AuthLayout from "./layouts/AuthLayout";
+import GlobalLayout from "./layouts/GlobalLayout";
+import CartPage from "./pages/CartPage";
+import CatalogPage from "./pages/CatalogPage";
+import CheckoutPage from "./pages/CheckoutPage";
+import GameDetailsPage from "./pages/GameDetailsPage";
+import HomePage from "./pages/HomePage";
+import LibraryFeedPage from "./pages/LibraryFeedPage";
+import LibraryGamePage from "./pages/LibraryGamePage";
+import LibraryPage from "./pages/LibraryPage";
+import LoginPage from "./pages/LoginPage";
+import NotFoundPage from "./pages/NotFoundPage";
+import ProfilePage from "./pages/ProfilePage";
+import RegisterPage from "./pages/RegisterPage";
+import SettingsPage from "./pages/SettingsPage";
+import WishlistPage from "./pages/WishlistPage";
 
-const protectedPage = (page) => <ProtectedRoute>{page}</ProtectedRoute>
+const protectedPage = (page) => <ProtectedRoute>{page}</ProtectedRoute>;
 
 function App() {
   return (
@@ -39,6 +40,7 @@ function App() {
         <Route path="games/:gameId" element={<GameDetailsPage />} />
         <Route path="profile" element={protectedPage(<ProfilePage />)} />
         <Route path="settings" element={protectedPage(<SettingsPage />)} />
+        <Route path="wishlist" element={protectedPage(<WishlistPage />)} />
         <Route path="404" element={<NotFoundPage />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
@@ -47,7 +49,7 @@ function App() {
         <Route path="register" element={<RegisterPage />} />
       </Route>
     </Routes>
-  )
+  );
 }
 
-export default App
+export default App;
