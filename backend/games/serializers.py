@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from games.models import Game, Genre
+from games.models import Game, GameScreenshot, Genre
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -31,6 +31,7 @@ class GameListSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
 
     genres = GenreSerializer(many=True, read_only=True)
     cover = serializers.SerializerMethodField()
+    is_owned = serializers.BooleanField(read_only=True, default=False)
 
     class Meta:
         model = Game
@@ -43,12 +44,22 @@ class GameListSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
             "developer",
             "release_date",
             "genres",
+            "is_owned",
         )
+        read_only_fields = fields
+
+
+class GameScreenshotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameScreenshot
+        fields = ("id", "image", "caption", "position")
         read_only_fields = fields
 
 
 class GameDetailSerializer(GameListSerializer):
     """Stable public detail contract used by the existing store page."""
+
+    screenshots = GameScreenshotSerializer(many=True, read_only=True)
 
     class Meta(GameListSerializer.Meta):
         fields = (
@@ -60,6 +71,9 @@ class GameDetailSerializer(GameListSerializer):
             "developer",
             "release_date",
             "requirements",
+            "hero_image_url",
+            "screenshots",
             "genres",
+            "is_owned",
         )
         read_only_fields = fields

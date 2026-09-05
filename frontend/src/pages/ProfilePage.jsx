@@ -1,156 +1,158 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { createPortal } from 'react-dom'
-import { Link } from 'react-router-dom'
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { Link } from "react-router-dom";
 
-import CatalogFeedback from '../components/CatalogFeedback'
+import CatalogFeedback from "../components/CatalogFeedback";
 import {
   getLibrary,
   getLibraryFeed,
   getLibraryGame,
   getPostComments,
-} from '../api/library'
-import { useAuth } from '../hooks/useAuth'
-import useProfile from '../hooks/useProfile'
+} from "../api/library";
+import { useAuth } from "../hooks/useAuth";
+import useProfile from "../hooks/useProfile";
 
 const ACTIVITY_METRICS = [
-  { key: 'library_games', label: 'Games', icon: '▦' },
-  { key: 'favorite_games', label: 'Favorites', icon: '★' },
-  { key: 'wishlist_games', label: 'Wishlist', icon: '♡' },
-  { key: 'reviews', label: 'Reviews', icon: '✎' },
-  { key: 'posts', label: 'Posts', icon: '▣' },
-]
+  { key: "library_games", label: "Games", icon: "▦" },
+  { key: "favorite_games", label: "Favorites", icon: "★" },
+  { key: "wishlist_games", label: "Wishlist", icon: "♡" },
+  { key: "reviews", label: "Reviews", icon: "✎" },
+  { key: "posts", label: "Posts", icon: "▣" },
+];
 
 const isCanceledRequest = (error) =>
-  error?.code === 'ERR_CANCELED' ||
-  error?.name === 'CanceledError' ||
-  error?.name === 'AbortError'
+  error?.code === "ERR_CANCELED" ||
+  error?.name === "CanceledError" ||
+  error?.name === "AbortError";
 
 const toCount = (value) => {
-  const count = Number(value)
-  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0
-}
+  const count = Number(value);
+  return Number.isFinite(count) && count > 0 ? Math.floor(count) : 0;
+};
 
 const formatDate = (value) => {
-  if (!value) return '—'
-  const date = new Date(value)
-  if (Number.isNaN(date.getTime())) return '—'
-  return new Intl.DateTimeFormat('en-US', {
-    day: '2-digit',
-    month: 'short',
-    year: 'numeric',
-  }).format(date)
-}
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "—";
+  return new Intl.DateTimeFormat("en-US", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  }).format(date);
+};
 
 const formatNumber = (value) =>
-  new Intl.NumberFormat('en-US').format(toCount(value))
+  new Intl.NumberFormat("en-US").format(toCount(value));
 
 const getUsername = (profile, user) =>
-  profile?.username || user?.username || 'player'
+  profile?.username || user?.username || "player";
 
 const getFullName = (profile, user) => {
-  const firstName = profile?.first_name || user?.first_name || ''
-  const lastName = profile?.last_name || user?.last_name || ''
-  const fullName = [firstName, lastName].filter(Boolean).join(' ').trim()
+  const firstName = profile?.first_name || user?.first_name || "";
+  const lastName = profile?.last_name || user?.last_name || "";
+  const fullName = [firstName, lastName].filter(Boolean).join(" ").trim();
   const displayName = String(
-    profile?.display_name || user?.display_name || '',
-  ).trim()
-  const username = getUsername(profile, user)
+    profile?.display_name || user?.display_name || "",
+  ).trim();
+  const username = getUsername(profile, user);
 
   if (displayName && displayName.toLowerCase() !== username.toLowerCase()) {
-    return displayName
+    return displayName;
   }
 
   return fullName && fullName.toLowerCase() !== username.toLowerCase()
     ? fullName
-    : ''
-}
+    : "";
+};
 
-const getMedia = (post) => post?.media || post?.game?.cover || null
+const getMedia = (post) => post?.media || post?.game?.cover || null;
 
 const isVideoMedia = (value) =>
-  typeof value === 'string' && /\.(mp4|webm|ogg)(?:$|[?#])/i.test(value)
+  typeof value === "string" && /\.(mp4|webm|ogg)(?:$|[?#])/i.test(value);
 
 const formatApiError = (error) => {
-  const data = error?.response?.data
-  if (typeof data === 'string' && data.trim()) return data
-  if (!data || typeof data !== 'object' || Array.isArray(data)) {
-    return 'Could not save your profile. Please try again.'
+  const data = error?.response?.data;
+  if (typeof data === "string" && data.trim()) return data;
+  if (!data || typeof data !== "object" || Array.isArray(data)) {
+    return "Could not save your profile. Please try again.";
   }
 
   const message = Object.entries(data)
     .flatMap(([field, value]) => {
-      const messages = Array.isArray(value) ? value : [value]
-      const label = field === 'non_field_errors' ? 'Profile' : field
-      return messages.map((item) => `${label}: ${String(item)}`)
+      const messages = Array.isArray(value) ? value : [value];
+      const label = field === "non_field_errors" ? "Profile" : field;
+      return messages.map((item) => `${label}: ${String(item)}`);
     })
-    .join(' ')
+    .join(" ");
 
-  return message || 'Could not save your profile. Please try again.'
-}
+  return message || "Could not save your profile. Please try again.";
+};
 
 async function loadReviewPreviews(items, reviewCount, signal) {
-  const targetCount = Math.min(toCount(reviewCount), 4)
-  if (!targetCount) return []
+  const targetCount = Math.min(toCount(reviewCount), 4);
+  if (!targetCount) return [];
 
-  const reviews = []
-  const batchSize = 6
+  const reviews = [];
+  const batchSize = 6;
 
   for (
     let index = 0;
     index < items.length && reviews.length < targetCount;
     index += batchSize
   ) {
-    if (signal.aborted) return []
+    if (signal.aborted) return [];
 
     const requests = items.slice(index, index + batchSize).map((item) => {
-      const gameId = item?.game?.id
-      return gameId ? getLibraryGame(gameId, { signal }) : Promise.resolve(null)
-    })
-    const results = await Promise.allSettled(requests)
+      const gameId = item?.game?.id;
+      return gameId
+        ? getLibraryGame(gameId, { signal })
+        : Promise.resolve(null);
+    });
+    const results = await Promise.allSettled(requests);
 
     results.forEach((result) => {
-      if (result.status === 'fulfilled' && result.value?.review) {
-        reviews.push(result.value)
+      if (result.status === "fulfilled" && result.value?.review) {
+        reviews.push(result.value);
       }
-    })
+    });
   }
 
-  return reviews.slice(0, 4)
+  return reviews.slice(0, 4);
 }
 
 async function loadRecentComments(posts, signal) {
   const postsWithComments = posts
     .filter((post) => toCount(post?.comment_count) > 0)
-    .slice(0, 6)
+    .slice(0, 6);
 
-  if (!postsWithComments.length) return []
+  if (!postsWithComments.length) return [];
 
   const results = await Promise.allSettled(
     postsWithComments.map(async (post) => {
-      const items = await getPostComments(post.id, { signal })
+      const items = await getPostComments(post.id, { signal });
       return items.map((comment) => ({
         ...comment,
         postId: post.id,
-        postTitle: post.title || post.game?.title || 'Post',
-      }))
+        postTitle: post.title || post.game?.title || "Post",
+      }));
     }),
-  )
+  );
 
-  if (signal.aborted) return []
+  if (signal.aborted) return [];
 
   return results
-    .flatMap((result) => (result.status === 'fulfilled' ? result.value : []))
+    .flatMap((result) => (result.status === "fulfilled" ? result.value : []))
     .sort(
       (left, right) =>
         new Date(right.created_at).getTime() -
         new Date(left.created_at).getTime(),
     )
-    .slice(0, 5)
+    .slice(0, 5);
 }
 
-function PostMedia({ post, className = '', controls = false }) {
-  const media = getMedia(post)
-  if (!media) return null
+function PostMedia({ post, className = "", controls = false }) {
+  const media = getMedia(post);
+  if (!media) return null;
 
   if (isVideoMedia(media)) {
     return (
@@ -162,130 +164,130 @@ function PostMedia({ post, className = '', controls = false }) {
         preload="metadata"
         playsInline
       />
-    )
+    );
   }
 
-  return <img className={className} src={media} alt="" loading="lazy" />
+  return <img className={className} src={media} alt="" loading="lazy" />;
 }
 
 function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
   const [form, setForm] = useState({
-    username: profile?.username || '',
-    email: profile?.email || '',
-    first_name: profile?.first_name || '',
-    last_name: profile?.last_name || '',
+    username: profile?.username || "",
+    email: profile?.email || "",
+    first_name: profile?.first_name || "",
+    last_name: profile?.last_name || "",
     avatar: null,
-  })
-  const [preview, setPreview] = useState(profile?.avatar || '')
-  const [saving, setSaving] = useState(false)
-  const [error, setError] = useState('')
-  const avatarInputRef = useRef(null)
-  const dialogRef = useRef(null)
-  const firstFieldRef = useRef(null)
-  const savingRef = useRef(false)
+  });
+  const [preview, setPreview] = useState(profile?.avatar || "");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const avatarInputRef = useRef(null);
+  const dialogRef = useRef(null);
+  const firstFieldRef = useRef(null);
+  const savingRef = useRef(false);
 
   useEffect(() => {
-    savingRef.current = saving
-  }, [saving])
+    savingRef.current = saving;
+  }, [saving]);
 
   useEffect(() => {
-    if (!preview?.startsWith('blob:')) return undefined
-    return () => URL.revokeObjectURL(preview)
-  }, [preview])
+    if (!preview?.startsWith("blob:")) return undefined;
+    return () => URL.revokeObjectURL(preview);
+  }, [preview]);
 
   useEffect(() => {
-    const previousOverflow = document.body.style.overflow
-    const previousActiveElement = document.activeElement
-    const dialog = dialogRef.current
+    const previousOverflow = document.body.style.overflow;
+    const previousActiveElement = document.activeElement;
+    const dialog = dialogRef.current;
     const focusFrame = window.requestAnimationFrame(() => {
-      firstFieldRef.current?.focus()
-    })
+      firstFieldRef.current?.focus();
+    });
 
     const handleKeyDown = (event) => {
-      if (event.key === 'Escape' && !savingRef.current) {
-        event.preventDefault()
-        onClose()
-        return
+      if (event.key === "Escape" && !savingRef.current) {
+        event.preventDefault();
+        onClose();
+        return;
       }
 
-      if (event.key !== 'Tab' || !dialog) return
+      if (event.key !== "Tab" || !dialog) return;
 
       const focusable = Array.from(
         dialog.querySelectorAll(
           'button:not([disabled]), input:not([disabled]), [href], [tabindex]:not([tabindex="-1"])',
         ),
-      )
+      );
       if (!focusable.length) {
-        event.preventDefault()
-        dialog.focus()
-        return
+        event.preventDefault();
+        dialog.focus();
+        return;
       }
 
-      const first = focusable[0]
-      const last = focusable[focusable.length - 1]
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
       if (event.shiftKey && document.activeElement === first) {
-        event.preventDefault()
-        last.focus()
+        event.preventDefault();
+        last.focus();
       } else if (!event.shiftKey && document.activeElement === last) {
-        event.preventDefault()
-        first.focus()
+        event.preventDefault();
+        first.focus();
       }
-    }
+    };
 
-    document.body.style.overflow = 'hidden'
-    document.addEventListener('keydown', handleKeyDown)
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", handleKeyDown);
 
     return () => {
-      window.cancelAnimationFrame(focusFrame)
-      document.body.style.overflow = previousOverflow
-      document.removeEventListener('keydown', handleKeyDown)
+      window.cancelAnimationFrame(focusFrame);
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", handleKeyDown);
       if (previousActiveElement instanceof HTMLElement) {
-        previousActiveElement.focus()
+        previousActiveElement.focus();
       }
-    }
-  }, [onClose])
+    };
+  }, [onClose]);
 
   const update = (field, value) => {
-    setForm((current) => ({ ...current, [field]: value }))
-    setError('')
-  }
+    setForm((current) => ({ ...current, [field]: value }));
+    setError("");
+  };
 
   const handleAvatarChange = (event) => {
-    const file = event.target.files?.[0]
-    if (!file) return
+    const file = event.target.files?.[0];
+    if (!file) return;
     if (file.size > 5 * 1024 * 1024) {
-      setError('Your avatar must be 5 MB or smaller.')
-      return
+      setError("Your avatar must be 5 MB or smaller.");
+      return;
     }
-    if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type)) {
-      setError('Choose a JPG, PNG, or WebP image.')
-      return
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      setError("Choose a JPG, PNG, or WebP image.");
+      return;
     }
 
     setForm((current) => ({
       ...current,
       avatar: file,
       remove_avatar: false,
-    }))
-    setPreview(URL.createObjectURL(file))
-    setError('')
-  }
+    }));
+    setPreview(URL.createObjectURL(file));
+    setError("");
+  };
 
   const clearAvatar = () => {
     setForm((current) => ({
       ...current,
       avatar: null,
       remove_avatar: true,
-    }))
-    setPreview('')
-    setError('')
-    if (avatarInputRef.current) avatarInputRef.current.value = ''
-  }
+    }));
+    setPreview("");
+    setError("");
+    if (avatarInputRef.current) avatarInputRef.current.value = "";
+  };
 
   const submit = async (event) => {
-    event.preventDefault()
-    setSaving(true)
-    setError('')
+    event.preventDefault();
+    setSaving(true);
+    setError("");
 
     try {
       const payload = {
@@ -293,29 +295,29 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
         email: form.email.trim(),
         first_name: form.first_name.trim(),
         last_name: form.last_name.trim(),
-      }
-      if (typeof File !== 'undefined' && form.avatar instanceof File) {
-        payload.avatar = form.avatar
+      };
+      if (typeof File !== "undefined" && form.avatar instanceof File) {
+        payload.avatar = form.avatar;
       } else if (form.remove_avatar) {
-        payload.avatar = null
+        payload.avatar = null;
       }
 
-      await onSave(payload)
-      await onSaved()
-      onClose()
+      await onSave(payload);
+      await onSaved();
+      onClose();
     } catch (requestError) {
-      setError(formatApiError(requestError))
+      setError(formatApiError(requestError));
     } finally {
-      setSaving(false)
+      setSaving(false);
     }
-  }
+  };
 
   return (
     <div
       className="profile-modal-backdrop"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !saving) onClose()
+        if (event.target === event.currentTarget && !saving) onClose();
       }}
     >
       <section
@@ -324,7 +326,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="profile-edit-title"
-        aria-describedby={error ? 'profile-edit-error' : undefined}
+        aria-describedby={error ? "profile-edit-error" : undefined}
         tabIndex={-1}
       >
         <div className="profile-modal-head">
@@ -349,7 +351,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
                 <img src={preview} alt="Profile preview" />
               ) : (
                 <span>
-                  {(profile?.username || 'P').charAt(0).toUpperCase()}
+                  {(profile?.username || "P").charAt(0).toUpperCase()}
                 </span>
               )}
             </div>
@@ -386,7 +388,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
                 name="username"
                 autoComplete="username"
                 value={form.username}
-                onChange={(event) => update('username', event.target.value)}
+                onChange={(event) => update("username", event.target.value)}
                 required
               />
             </label>
@@ -397,7 +399,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
                 name="email"
                 autoComplete="email"
                 value={form.email}
-                onChange={(event) => update('email', event.target.value)}
+                onChange={(event) => update("email", event.target.value)}
                 required
               />
             </label>
@@ -407,7 +409,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
                 name="firstName"
                 autoComplete="given-name"
                 value={form.first_name}
-                onChange={(event) => update('first_name', event.target.value)}
+                onChange={(event) => update("first_name", event.target.value)}
               />
             </label>
             <label>
@@ -416,7 +418,7 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
                 name="lastName"
                 autoComplete="family-name"
                 value={form.last_name}
-                onChange={(event) => update('last_name', event.target.value)}
+                onChange={(event) => update("last_name", event.target.value)}
               />
             </label>
           </div>
@@ -443,23 +445,23 @@ function ProfileEditModal({ profile, onClose, onSaved, onSave }) {
               className="profile-modal-button primary"
               disabled={saving}
             >
-              {saving ? 'Saving…' : 'Save changes'}
+              {saving ? "Saving…" : "Save changes"}
             </button>
           </div>
         </form>
       </section>
     </div>
-  )
+  );
 }
 
 function GalleryPostCard({ post, compact = false }) {
-  const media = getMedia(post)
+  const media = getMedia(post);
 
   return (
-    <article className={`profile-post-card${compact ? ' compact' : ''}`}>
+    <article className={`profile-post-card${compact ? " compact" : ""}`}>
       <div className="profile-post-meta">
         <span className="profile-game-chip">
-          {post?.game?.title || 'Community'}
+          {post?.game?.title || "Community"}
         </span>
         <span>{formatDate(post?.created_at)}</span>
       </div>
@@ -469,7 +471,7 @@ function GalleryPostCard({ post, compact = false }) {
         <PostMedia
           post={post}
           className="profile-post-image"
-          controls={post?.kind === 'video'}
+          controls={post?.kind === "video"}
         />
       )}
       <div className="profile-post-actions" aria-label="Post activity">
@@ -477,23 +479,24 @@ function GalleryPostCard({ post, compact = false }) {
         <span>▢ {formatNumber(post?.comment_count)}</span>
       </div>
     </article>
-  )
+  );
 }
 
 function ReviewCard({ item }) {
-  const review = item?.review
-  if (!review) return null
+  const review = item?.review;
+  if (!review) return null;
 
   const rating = Math.min(
     5,
     Math.max(0, Math.round(Number(review.rating) || 0)),
-  )
+  );
+  const reviewImage = review.images?.[0]?.image || item.game?.cover;
 
   return (
     <article className="profile-review-card">
       <div className="profile-review-media">
-        {item.game?.cover ? (
-          <img src={item.game.cover} alt="" loading="lazy" />
+        {reviewImage ? (
+          <img src={reviewImage} alt="" loading="lazy" />
         ) : (
           <div />
         )}
@@ -501,35 +504,35 @@ function ReviewCard({ item }) {
       <div className="profile-review-body">
         <div className="profile-post-meta">
           <span className="profile-game-chip">
-            {item.game?.title || 'Game'}
+            {item.game?.title || "Game"}
           </span>
           <span>{formatDate(review.created_at)}</span>
         </div>
         <h3>{item.game?.title}</h3>
         <div className="profile-stars" aria-label={`Rating ${rating} out of 5`}>
-          {'★'.repeat(rating)}
-          {'☆'.repeat(5 - rating)}
+          {"★".repeat(rating)}
+          {"☆".repeat(5 - rating)}
         </div>
         <p>{review.body}</p>
       </div>
     </article>
-  )
+  );
 }
 
 function ProfilePage() {
-  const { user, reloadProfile } = useAuth()
+  const { user, reloadProfile } = useAuth();
   const {
     profile: fetchedProfile,
     loading: profileLoading,
     error: profileError,
     reload,
     save,
-  } = useProfile()
+  } = useProfile();
   const [library, setLibrary] = useState({
     items: [],
     loading: true,
     error: null,
-  })
+  });
   const [posts, setPosts] = useState({
     all: [],
     screenshot: [],
@@ -538,71 +541,71 @@ function ProfilePage() {
     community: [],
     loading: true,
     error: null,
-  })
+  });
   const [reviews, setReviews] = useState({
     items: [],
     loading: true,
     error: null,
-  })
+  });
   const [comments, setComments] = useState({
     items: [],
     loading: true,
     error: null,
-  })
-  const [modalOpen, setModalOpen] = useState(false)
-  const [successMessage, setSuccessMessage] = useState('')
-  const successTimerRef = useRef(null)
+  });
+  const [modalOpen, setModalOpen] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
+  const successTimerRef = useRef(null);
 
-  const profile = fetchedProfile || user
-  const stats = useMemo(() => fetchedProfile?.stats || {}, [fetchedProfile])
-  const reviewCount = toCount(stats.reviews)
+  const profile = fetchedProfile || user;
+  const stats = useMemo(() => fetchedProfile?.stats || {}, [fetchedProfile]);
+  const reviewCount = toCount(stats.reviews);
 
   useEffect(() => {
-    if (!fetchedProfile?.id) return undefined
+    if (!fetchedProfile?.id) return undefined;
 
-    const controller = new AbortController()
+    const controller = new AbortController();
 
     const loadProfileContent = async () => {
       const [libraryResult, feedResult] = await Promise.allSettled([
         getLibrary({ signal: controller.signal }),
         getLibraryFeed(
           {
-            tab: 'mine',
-            kind: 'all',
-            ordering: 'latest',
-            search: '',
+            tab: "mine",
+            kind: "all",
+            ordering: "latest",
+            search: "",
           },
           { signal: controller.signal },
         ),
-      ])
+      ]);
 
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted) return;
 
       const libraryItems =
-        libraryResult.status === 'fulfilled' ? libraryResult.value : []
+        libraryResult.status === "fulfilled" ? libraryResult.value : [];
       const activityPosts =
-        feedResult.status === 'fulfilled' ? feedResult.value.items : []
+        feedResult.status === "fulfilled" ? feedResult.value.items : [];
 
       setLibrary(
-        libraryResult.status === 'fulfilled'
+        libraryResult.status === "fulfilled"
           ? { items: libraryItems, loading: false, error: null }
           : {
               items: [],
               loading: false,
-              error: 'Your game collection could not be loaded.',
+              error: "Your game collection could not be loaded.",
             },
-      )
+      );
       setPosts(
-        feedResult.status === 'fulfilled'
+        feedResult.status === "fulfilled"
           ? {
               all: activityPosts,
               screenshot: activityPosts.filter(
-                (post) => post.kind === 'screenshot',
+                (post) => post.kind === "screenshot",
               ),
-              video: activityPosts.filter((post) => post.kind === 'video'),
-              guide: activityPosts.filter((post) => post.kind === 'guide'),
+              video: activityPosts.filter((post) => post.kind === "video"),
+              guide: activityPosts.filter((post) => post.kind === "guide"),
               community: activityPosts.filter(
-                (post) => post.kind === 'community' || post.kind === 'news',
+                (post) => post.kind === "community" || post.kind === "news",
               ),
               loading: false,
               error: null,
@@ -614,118 +617,118 @@ function ProfilePage() {
               guide: [],
               community: [],
               loading: false,
-              error: 'Your profile activity could not be loaded.',
+              error: "Your profile activity could not be loaded.",
             },
-      )
+      );
 
       const [reviewItems, recentComments] = await Promise.all([
-        libraryResult.status === 'fulfilled'
+        libraryResult.status === "fulfilled"
           ? loadReviewPreviews(libraryItems, reviewCount, controller.signal)
           : Promise.resolve([]),
-        feedResult.status === 'fulfilled'
+        feedResult.status === "fulfilled"
           ? loadRecentComments(activityPosts, controller.signal)
           : Promise.resolve([]),
-      ])
+      ]);
 
-      if (controller.signal.aborted) return
+      if (controller.signal.aborted) return;
 
       setReviews({
         items: reviewItems,
         loading: false,
         error:
-          libraryResult.status === 'fulfilled'
+          libraryResult.status === "fulfilled"
             ? null
-            : 'Your review previews could not be loaded.',
-      })
+            : "Your review previews could not be loaded.",
+      });
       setComments({
         items: recentComments,
         loading: false,
         error:
-          feedResult.status === 'fulfilled'
+          feedResult.status === "fulfilled"
             ? null
-            : 'Comments on your posts could not be loaded.',
-      })
-    }
+            : "Comments on your posts could not be loaded.",
+      });
+    };
 
     loadProfileContent().catch((error) => {
-      if (controller.signal.aborted || isCanceledRequest(error)) return
+      if (controller.signal.aborted || isCanceledRequest(error)) return;
       setLibrary({
         items: [],
         loading: false,
-        error: 'Your game collection could not be loaded.',
-      })
+        error: "Your game collection could not be loaded.",
+      });
       setPosts((current) => ({
         ...current,
         loading: false,
-        error: 'Your profile activity could not be loaded.',
-      }))
+        error: "Your profile activity could not be loaded.",
+      }));
       setReviews({
         items: [],
         loading: false,
-        error: 'Your review previews could not be loaded.',
-      })
+        error: "Your review previews could not be loaded.",
+      });
       setComments({
         items: [],
         loading: false,
-        error: 'Comments on your posts could not be loaded.',
-      })
-    })
+        error: "Comments on your posts could not be loaded.",
+      });
+    });
 
-    return () => controller.abort()
-  }, [fetchedProfile?.id, reviewCount])
+    return () => controller.abort();
+  }, [fetchedProfile?.id, reviewCount]);
 
   useEffect(
     () => () => {
       if (successTimerRef.current) {
-        window.clearTimeout(successTimerRef.current)
+        window.clearTimeout(successTimerRef.current);
       }
     },
     [],
-  )
+  );
 
-  const openModal = useCallback(() => setModalOpen(true), [])
-  const closeModal = useCallback(() => setModalOpen(false), [])
+  const openModal = useCallback(() => setModalOpen(true), []);
+  const closeModal = useCallback(() => setModalOpen(false), []);
 
   const handleSaved = useCallback(async () => {
-    await reloadProfile()
-    setSuccessMessage('Your profile was updated successfully.')
+    await reloadProfile();
+    setSuccessMessage("Your profile was updated successfully.");
     if (successTimerRef.current) {
-      window.clearTimeout(successTimerRef.current)
+      window.clearTimeout(successTimerRef.current);
     }
     successTimerRef.current = window.setTimeout(
-      () => setSuccessMessage(''),
+      () => setSuccessMessage(""),
       3000,
-    )
-  }, [reloadProfile])
+    );
+  }, [reloadProfile]);
 
-  const username = getUsername(profile, user)
-  const fullName = getFullName(profile, user)
-  const libraryPreview = library.items.slice(0, 4)
+  const username = getUsername(profile, user);
+  const fullName = getFullName(profile, user);
+  const libraryPreview = library.items.slice(0, 4);
   const coverImage =
     libraryPreview[0]?.game?.hero_image_url ||
     libraryPreview[0]?.game?.cover ||
-    ''
+    "";
   const completedProfileFields = [
     profile?.username,
     profile?.email,
     profile?.first_name || profile?.last_name,
     profile?.avatar,
-  ].filter(Boolean).length
-  const completion = Math.round((completedProfileFields / 4) * 100)
+  ].filter(Boolean).length;
+  const completion = Math.round((completedProfileFields / 4) * 100);
 
   const sideSections = useMemo(
     () => [
-      ['Activity', '#activity', null],
-      ['Games', '#games', stats.library_games],
-      ['Reviews', '#reviews', stats.reviews],
-      ['Screenshots', '#screenshots', posts.screenshot.length],
-      ['Videos', '#videos', posts.video.length],
-      ['Posts', '#community-posts', stats.posts],
-      ['Guides', '#guides', posts.guide.length],
-      ['Comments', '#comments', comments.items.length],
+      ["Activity", "#activity", null],
+      ["Games", "#games", stats.library_games],
+      ["Reviews", "#reviews", stats.reviews],
+      ["Screenshots", "#screenshots", posts.screenshot.length],
+      ["Videos", "#videos", posts.video.length],
+      ["Posts", "#community-posts", stats.posts],
+      ["Guides", "#guides", posts.guide.length],
+      ["Comments", "#comments", comments.items.length],
     ],
     [comments.items.length, posts, stats],
-  )
+  );
 
   if (profileLoading && !fetchedProfile) {
     return (
@@ -736,7 +739,7 @@ function ProfilePage() {
           message="Preparing your profile and activity."
         />
       </div>
-    )
+    );
   }
 
   if (profileError) {
@@ -749,7 +752,7 @@ function ProfilePage() {
           onRetry={reload}
         />
       </div>
-    )
+    );
   }
 
   if (!profile) {
@@ -762,7 +765,7 @@ function ProfilePage() {
           onRetry={reload}
         />
       </div>
-    )
+    );
   }
 
   return (
@@ -836,6 +839,9 @@ function ProfilePage() {
           <section className="profile-section" id="games">
             <div className="profile-section-title">
               <h2>Game collection</h2>
+              <Link className="profile-wishlist-link" to="/wishlist">
+                Open Wishlist <span aria-hidden="true">→</span>
+              </Link>
             </div>
             <div className="profile-stat-row">
               <div>
@@ -868,7 +874,7 @@ function ProfilePage() {
                     to={`/library/games/${item.game?.id}`}
                     className="profile-game-card"
                     key={item.id}
-                    aria-label={`Open ${item.game?.title || 'library game'}`}
+                    aria-label={`Open ${item.game?.title || "library game"}`}
                   >
                     <div className="profile-game-cover">
                       {item.game?.cover ? (
@@ -931,7 +937,7 @@ function ProfilePage() {
                       <PostMedia post={post} />
                     ) : (
                       <div className="profile-media-fallback">
-                        {post.game?.title || 'Screenshot'}
+                        {post.game?.title || "Screenshot"}
                       </div>
                     )}
                   </div>
@@ -1035,7 +1041,7 @@ function ProfilePage() {
           <section className="profile-section" id="comments">
             <div className="profile-section-title">
               <h2>
-                Recent comments on your posts{' '}
+                Recent comments on your posts{" "}
                 <span>{comments.items.length}</span>
               </h2>
             </div>
@@ -1050,11 +1056,11 @@ function ProfilePage() {
                 {comments.items.map((comment) => (
                   <article key={comment.id}>
                     <div className="mini-avatar">
-                      {comment.author?.username?.charAt(0).toUpperCase() || 'U'}
+                      {comment.author?.username?.charAt(0).toUpperCase() || "U"}
                     </div>
                     <div>
                       <div className="profile-comment-meta">
-                        <strong>{comment.author?.username || 'User'}</strong>
+                        <strong>{comment.author?.username || "User"}</strong>
                         <span>{formatDate(comment.created_at)}</span>
                       </div>
                       <span className="profile-comment-context">
@@ -1132,7 +1138,7 @@ function ProfilePage() {
           document.body,
         )}
     </div>
-  )
+  );
 }
 
-export default ProfilePage
+export default ProfilePage;

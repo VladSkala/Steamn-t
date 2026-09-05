@@ -1,28 +1,27 @@
-import { useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate, useParams } from "react-router-dom";
 
 import {
   deleteGameReview,
   saveGameReview,
-  toggleGameWishlist,
   togglePostReaction,
   updateLibraryItem,
-} from '../api/library'
-import CatalogFeedback from '../components/CatalogFeedback'
-import LibraryFrame from '../components/library/LibraryFrame'
-import LibraryPostCard from '../components/library/LibraryPostCard'
-import useLibrary from '../hooks/useLibrary'
-import { useLibraryGame } from '../hooks/useLibraryExperience'
+} from "../api/library";
+import CatalogFeedback from "../components/CatalogFeedback";
+import LibraryFrame from "../components/library/LibraryFrame";
+import LibraryPostCard from "../components/library/LibraryPostCard";
+import useLibrary from "../hooks/useLibrary";
+import { useLibraryGame } from "../hooks/useLibraryExperience";
 
 function StarIcon({ filled = false }) {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        className={filled ? 'filled' : ''}
+        className={filled ? "filled" : ""}
         d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z"
       />
     </svg>
-  )
+  );
 }
 
 function FriendGroup({ title, users }) {
@@ -42,7 +41,7 @@ function FriendGroup({ title, users }) {
                     src={user.avatar}
                     alt=""
                     onError={(event) => {
-                      event.currentTarget.hidden = true
+                      event.currentTarget.hidden = true;
                     }}
                   />
                 )}
@@ -55,166 +54,309 @@ function FriendGroup({ title, users }) {
         <p>No followed players here yet.</p>
       )}
     </section>
-  )
+  );
+}
+
+const REVIEW_MAX_IMAGES = 4;
+const REVIEW_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const REVIEW_IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+function getReviewSaveError(requestError) {
+  const payload = requestError?.response?.data;
+  const imageError = payload?.images || payload?.image;
+  if (Array.isArray(imageError)) return imageError[0];
+  if (typeof imageError === "string") return imageError;
+  if (typeof payload?.detail === "string") return payload.detail;
+  return "Unable to save your review.";
+}
+
+function ReviewImageTile({ source, alt, onRemove, removeLabel }) {
+  return (
+    <figure className="library-review-image-tile">
+      <img src={source} alt={alt} />
+      {onRemove && (
+        <button type="button" onClick={onRemove} aria-label={removeLabel}>
+          ×
+        </button>
+      )}
+    </figure>
+  );
 }
 
 function ReviewEditor({ gameId, review, onSaved }) {
-  const [rating, setRating] = useState(review?.rating || 5)
-  const [body, setBody] = useState(review?.body || '')
-  const [editing, setEditing] = useState(!review)
-  const [busy, setBusy] = useState(false)
-  const [error, setError] = useState('')
+  const [editing, setEditing] = useState(!review);
+  const [rating, setRating] = useState(review?.rating || 5);
+  const [body, setBody] = useState(review?.body || "");
+  const [existingImages, setExistingImages] = useState(review?.images || []);
+  const [newImages, setNewImages] = useState([]);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const previewUrls = useRef(new Set());
 
-  const submit = async (event) => {
-    event.preventDefault()
-    setBusy(true)
-    setError('')
-    try {
-      await saveGameReview(gameId, { rating: Number(rating), body })
-      setEditing(false)
-      onSaved()
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.body?.[0] ||
-          requestError.response?.data?.detail ||
-          'Your review could not be saved.',
-      )
-    } finally {
-      setBusy(false)
+  const releaseNewImages = () => {
+    previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+    previewUrls.current.clear();
+    setNewImages([]);
+  };
+
+  useEffect(
+    () => () => {
+      previewUrls.current.forEach((url) => URL.revokeObjectURL(url));
+      previewUrls.current.clear();
+    },
+    [],
+  );
+
+  const imageCount = existingImages.length + newImages.length;
+
+  const handleImages = (event) => {
+    const files = Array.from(event.target.files || []);
+    event.target.value = "";
+    setError("");
+    if (imageCount + files.length > REVIEW_MAX_IMAGES) {
+      setError(`You can attach up to ${REVIEW_MAX_IMAGES} images.`);
+      return;
     }
-  }
-
-  const remove = async () => {
-    setBusy(true)
-    setError('')
-    try {
-      await deleteGameReview(gameId)
-      setBody('')
-      setRating(5)
-      setEditing(true)
-      onSaved()
-    } catch (requestError) {
-      setError(
-        requestError.response?.data?.detail ||
-          'Your review could not be deleted.',
-      )
-    } finally {
-      setBusy(false)
+    const invalidFile = files.find((file) => {
+      const validExtension = /\.(jpe?g|png|webp)$/i.test(file.name);
+      return (
+        (file.type && !REVIEW_IMAGE_TYPES.has(file.type)) || !validExtension
+      );
+    });
+    if (invalidFile) {
+      setError("Review images must be JPG, PNG, or WebP files.");
+      return;
     }
-  }
+    if (files.some((file) => file.size > REVIEW_MAX_IMAGE_BYTES)) {
+      setError("Each review image must be 5 MB or smaller.");
+      return;
+    }
+    // Object URLs are allocated in the event, never in a StrictMode state updater.
+    const additions = files.map((file) => {
+      const preview = URL.createObjectURL(file);
+      previewUrls.current.add(preview);
+      return { file, preview, key: `${file.name}-${file.size}-${preview}` };
+    });
+    setNewImages((current) => [...current, ...additions]);
+  };
 
-  if (review && !editing) {
+  const removeNewImage = (key) => {
+    const removed = newImages.find((image) => image.key === key);
+    if (removed) {
+      URL.revokeObjectURL(removed.preview);
+      previewUrls.current.delete(removed.preview);
+    }
+    setNewImages((current) => current.filter((image) => image.key !== key));
+  };
+
+  const handleSubmit = async (event) => {
+    event.preventDefault();
+    setSaving(true);
+    setError("");
+    const payload = new FormData();
+    payload.append("rating", String(rating));
+    payload.append("body", body);
+    payload.append("replace_images", "1");
+    existingImages.forEach((image) =>
+      payload.append("keep_image_ids", String(image.id)),
+    );
+    newImages.forEach(({ file }) => payload.append("images", file));
+    try {
+      await saveGameReview(gameId, payload);
+      releaseNewImages();
+      setEditing(false);
+      onSaved();
+    } catch (requestError) {
+      setError(getReviewSaveError(requestError));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setSaving(true);
+    setError("");
+    try {
+      await deleteGameReview(gameId);
+      releaseNewImages();
+      setExistingImages([]);
+      setRating(5);
+      setBody("");
+      setEditing(true);
+      onSaved();
+    } catch {
+      setError("Unable to delete your review.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const cancelEditing = () => {
+    setRating(review?.rating || 5);
+    setBody(review?.body || "");
+    setExistingImages(Array.isArray(review?.images) ? review.images : []);
+    releaseNewImages();
+    setError("");
+    setEditing(false);
+  };
+
+  if (!editing && review) {
     return (
       <div className="library-review-saved">
-        <span>
-          {'★'.repeat(review.rating)}
-          {'☆'.repeat(5 - review.rating)}
-        </span>
+        <span>{"★".repeat(Number(review.rating))}</span>
         <p>{review.body}</p>
-        <div>
+        {Array.isArray(review.images) && review.images.length > 0 && (
+          <div className="library-review-gallery" aria-label="Review images">
+            {review.images.map((image, index) => (
+              <ReviewImageTile
+                key={image.id}
+                source={image.image}
+                alt={`Review image ${index + 1}`}
+              />
+            ))}
+          </div>
+        )}
+        <div className="library-review-actions">
           <button type="button" onClick={() => setEditing(true)}>
-            Edit review
+            Edit
           </button>
           <button
             type="button"
             className="danger"
-            disabled={busy}
-            onClick={remove}
+            onClick={handleDelete}
+            disabled={saving}
           >
-            {busy ? 'Deleting…' : 'Delete'}
+            Delete
           </button>
         </div>
         {error && <small role="alert">{error}</small>}
       </div>
-    )
+    );
   }
 
   return (
-    <form className="library-review-form" onSubmit={submit}>
+    <form className="library-review-form" onSubmit={handleSubmit}>
       <label>
-        <span>Rating</span>
+        Rating
         <select
           value={rating}
           onChange={(event) => setRating(event.target.value)}
+          disabled={saving}
         >
           {[5, 4, 3, 2, 1].map((value) => (
-            <option value={value} key={value}>
+            <option key={value} value={value}>
               {value} / 5
             </option>
           ))}
         </select>
       </label>
       <label>
-        <span>Your review</span>
+        Review
         <textarea
           value={body}
           onChange={(event) => setBody(event.target.value)}
+          minLength={3}
           maxLength={4000}
-          placeholder="Share what you think about this game…"
+          required
+          disabled={saving}
+          placeholder="What did you think about this game?"
         />
       </label>
+      <div className="library-review-photo-field">
+        <div className="library-review-photo-heading">
+          <div>
+            <strong>Photos</strong>
+            <span>JPG, PNG, or WebP · 5 MB each</span>
+          </div>
+          <span>
+            {imageCount} / {REVIEW_MAX_IMAGES}
+          </span>
+        </div>
+        {imageCount > 0 && (
+          <div className="library-review-gallery is-editing">
+            {existingImages.map((image, index) => (
+              <ReviewImageTile
+                key={image.id}
+                source={image.image}
+                alt={`Saved review image ${index + 1}`}
+                removeLabel={`Remove saved image ${index + 1}`}
+                onRemove={() =>
+                  setExistingImages((current) =>
+                    current.filter((candidate) => candidate.id !== image.id),
+                  )
+                }
+              />
+            ))}
+            {newImages.map((image, index) => (
+              <ReviewImageTile
+                key={image.key}
+                source={image.preview}
+                alt={`New review image ${index + 1}`}
+                removeLabel={`Remove new image ${index + 1}`}
+                onRemove={() => removeNewImage(image.key)}
+              />
+            ))}
+          </div>
+        )}
+        {imageCount < REVIEW_MAX_IMAGES && (
+          <label className="library-review-upload">
+            <span aria-hidden="true">＋</span> Add photos
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp,.jpg,.jpeg,.png,.webp"
+              multiple
+              onChange={handleImages}
+              disabled={saving}
+            />
+          </label>
+        )}
+      </div>
       {error && <small role="alert">{error}</small>}
-      <div>
+      <div className="library-review-actions">
         {review && (
-          <button type="button" onClick={() => setEditing(false)}>
+          <button type="button" onClick={cancelEditing} disabled={saving}>
             Cancel
           </button>
         )}
-        <button
-          type="submit"
-          className="primary"
-          disabled={busy || !body.trim()}
-        >
-          {busy ? 'Saving…' : 'Publish review'}
+        <button type="submit" className="primary" disabled={saving}>
+          {saving ? "Saving…" : "Save review"}
         </button>
       </div>
     </form>
-  )
+  );
 }
 
 function LibraryGamePage() {
-  const { gameId } = useParams()
-  const navigate = useNavigate()
-  const sidebar = useLibrary()
+  const { gameId } = useParams();
+  const navigate = useNavigate();
+  const sidebar = useLibrary();
   const { data, loading, error, retry, refresh, updatePost } =
-    useLibraryGame(gameId)
-  const [favoriteBusy, setFavoriteBusy] = useState(false)
-  const [wishlistBusy, setWishlistBusy] = useState(false)
+    useLibraryGame(gameId);
+  const [favoriteBusy, setFavoriteBusy] = useState(false);
 
   const likePost = async (post) => {
-    updatePost(post.id, await togglePostReaction(post.id))
-  }
+    updatePost(post.id, await togglePostReaction(post.id));
+  };
 
   const toggleFavorite = async () => {
-    if (!data?.library_item || favoriteBusy) return
-    setFavoriteBusy(true)
+    if (!data?.library_item || favoriteBusy) return;
+    setFavoriteBusy(true);
     try {
       await updateLibraryItem(data.library_item.id, {
         is_favorite: !data.library_item.is_favorite,
-      })
-      refresh()
-      sidebar.retry()
+      });
+      refresh();
+      sidebar.retry();
     } finally {
-      setFavoriteBusy(false)
+      setFavoriteBusy(false);
     }
-  }
+  };
 
-  const toggleWishlist = async () => {
-    if (wishlistBusy) return
-    setWishlistBusy(true)
-    try {
-      await toggleGameWishlist(gameId)
-      refresh()
-    } finally {
-      setWishlistBusy(false)
-    }
-  }
-
-  const frame = (children, title = 'Library game') => (
+  const frame = (children, title = "Library game") => (
     <LibraryFrame items={sidebar.items} activeGameId={gameId} title={title}>
       {children}
     </LibraryFrame>
-  )
+  );
 
   if (loading) {
     return frame(
@@ -224,48 +366,48 @@ function LibraryGamePage() {
         message="Fetching ownership, news, and community activity."
         className="library-feedback"
       />,
-      'Loading library game',
-    )
+      "Loading library game",
+    );
   }
 
   if (error) {
     return frame(
       <>
         <CatalogFeedback
-          kind={error === 'not-found' ? 'empty' : 'error'}
+          kind={error === "not-found" ? "empty" : "error"}
           title={
-            error === 'not-found'
-              ? 'Game not in your library'
-              : 'Game unavailable'
+            error === "not-found"
+              ? "Game not in your library"
+              : "Game unavailable"
           }
           message={
-            error === 'not-found'
-              ? 'Purchase this game before opening its library page.'
+            error === "not-found"
+              ? "Purchase this game before opening its library page."
               : error
           }
-          onRetry={error === 'not-found' ? undefined : retry}
+          onRetry={error === "not-found" ? undefined : retry}
           className="library-feedback"
         />
         <Link className="library-back-link" to="/library">
           ← Back to library
         </Link>
       </>,
-    )
+    );
   }
 
-  const game = data.game
-  const item = data.library_item
-  const heroSource = game.hero_image_url || game.cover
+  const game = data.game;
+  const item = data.library_item;
+  const heroSource = game.hero_image_url || game.cover;
   const heroStyle = heroSource
     ? { backgroundImage: `url("${heroSource}")` }
-    : undefined
+    : undefined;
   const heroMonogram = game.title
     .split(/\s+/)
     .filter(Boolean)
     .slice(0, 2)
     .map((word) => word[0])
-    .join('')
-    .toUpperCase()
+    .join("")
+    .toUpperCase();
 
   return (
     <LibraryFrame
@@ -275,12 +417,12 @@ function LibraryGamePage() {
       className="library-owned-game-page"
     >
       <section
-        className={`library-game-hero ${heroSource ? 'has-artwork' : 'is-fallback'}`}
+        className={`library-game-hero ${heroSource ? "has-artwork" : "is-fallback"}`}
         style={heroStyle}
       >
         {!heroSource && (
           <div className="library-game-hero-fallback" aria-hidden="true">
-            <span>{heroMonogram || 'S'}</span>
+            <span>{heroMonogram || "S"}</span>
           </div>
         )}
         <div className="library-game-hero-overlay" />
@@ -313,7 +455,7 @@ function LibraryGamePage() {
               <strong>
                 {game.disk_size_gb
                   ? `${Number(game.disk_size_gb).toLocaleString()} GB`
-                  : 'Not specified'}
+                  : "Not specified"}
               </strong>
             </span>
           </div>
@@ -321,22 +463,13 @@ function LibraryGamePage() {
         <div className="library-game-hero-actions">
           <button
             type="button"
-            className={item.is_favorite ? 'active' : ''}
+            className={item.is_favorite ? "active" : ""}
             aria-label="Toggle favorite"
             aria-pressed={item.is_favorite}
             disabled={favoriteBusy}
             onClick={toggleFavorite}
           >
             <StarIcon filled={item.is_favorite} />
-          </button>
-          <button
-            type="button"
-            className="text-action"
-            aria-pressed={data.is_wishlisted}
-            disabled={wishlistBusy}
-            onClick={toggleWishlist}
-          >
-            {data.is_wishlisted ? 'Wishlisted' : 'Wishlist'}
           </button>
         </div>
       </section>
@@ -354,7 +487,7 @@ function LibraryGamePage() {
             <h2>My review</h2>
           </div>
           <ReviewEditor
-            key={data.review?.updated_at || 'new'}
+            key={`${game.id}:${data.review?.updated_at || "new"}`}
             gameId={game.id}
             review={data.review}
             onSaved={refresh}
@@ -376,7 +509,7 @@ function LibraryGamePage() {
         <div>
           <span>ABOUT THIS GAME</span>
           <h2>{game.title}</h2>
-          <p>{game.description || 'No description is available yet.'}</p>
+          <p>{game.description || "No description is available yet."}</p>
         </div>
         <dl>
           <div>
@@ -385,7 +518,7 @@ function LibraryGamePage() {
           </div>
           <div>
             <dt>Released</dt>
-            <dd>{game.release_date || 'Not specified'}</dd>
+            <dd>{game.release_date || "Not specified"}</dd>
           </div>
           <div>
             <dt>Purchased for</dt>
@@ -437,7 +570,7 @@ function LibraryGamePage() {
         )}
       </section>
     </LibraryFrame>
-  )
+  );
 }
 
-export default LibraryGamePage
+export default LibraryGamePage;

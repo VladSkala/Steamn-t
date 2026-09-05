@@ -1,0 +1,37 @@
+{
+  "unique_cases": 66,
+  "passed_after_isolated_retries": 66,
+  "failed_after_retries": 0,
+  "widths": [
+    320,
+    390,
+    700,
+    820,
+    1024,
+    1440
+  ],
+  "pages": [
+    "Catalog",
+    "Library",
+    "Wishlist"
+  ],
+  "states": [
+    "grid",
+    "list",
+    "favorites",
+    "search",
+    "empty",
+    "sticky"
+  ],
+  "infrastructure_retries": [
+    {
+      "width": 1440,
+      "case": "wishlist"
+    },
+    {
+      "width": 1024,
+      "case": "catalog"
+    }
+  ],
+  "method": "Actual React source + live Django API through isolated offline QA routing/transport adapters; not production Vite/ESLint E2E"
+}

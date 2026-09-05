@@ -17,7 +17,7 @@
   width: min(1180px, calc(100% - 48px));
   min-width: 0;
   margin: 0 auto;
-  padding: 0 0 72px;
+  padding: 30px 0 72px;
 }
 
 .profile-hero {
@@ -52,10 +52,10 @@
   position: relative;
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr) auto;
-  min-height: 82px;
+  min-height: 94px;
   align-items: end;
-  gap: 18px;
-  padding: 0 18px 13px;
+  gap: 20px;
+  padding: 0 26px 18px;
   background: linear-gradient(180deg, rgba(13, 17, 34, 0.72), #0d1122);
 }
 
@@ -161,6 +161,7 @@
 }
 
 .profile-edit-button:focus-visible,
+.profile-wishlist-link:focus-visible,
 .profile-modal button:focus-visible,
 .profile-modal input:focus-visible,
 .profile-upload-button:focus-within,
@@ -222,6 +223,8 @@
   display: flex;
   min-height: 24px;
   align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   padding: 0 2px 12px;
 }
 
@@ -241,6 +244,33 @@
   background: rgba(124, 58, 237, 0.13);
   color: #bda5ff;
   font-size: 0.58rem;
+}
+
+.profile-wishlist-link {
+  min-height: 30px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 9px;
+  border: 1px solid rgba(156, 104, 255, 0.28);
+  border-radius: 8px;
+  background: rgba(124, 58, 237, 0.1);
+  color: #c7b5ff;
+  font-size: 0.61rem;
+  font-weight: 800;
+  text-decoration: none;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.profile-wishlist-link:hover {
+  border-color: rgba(189, 140, 255, 0.62);
+  background: rgba(124, 58, 237, 0.2);
+  color: #fff;
+  transform: translateY(-1px);
 }
 
 .profile-activity-grid {
@@ -1030,7 +1060,7 @@
 @media (max-width: 620px) {
   .profile-page {
     width: calc(100% - 16px);
-    padding-bottom: 40px;
+    padding: 20px 0 40px;
   }
 
   .profile-hero {
@@ -1045,9 +1075,9 @@
 
   .profile-hero-info {
     grid-template-columns: 76px minmax(0, 1fr);
-    gap: 10px;
-    min-height: 91px;
-    padding: 0 11px 10px;
+    gap: 12px;
+    min-height: 96px;
+    padding: 0 16px 14px;
   }
 
   .profile-avatar-wrap,

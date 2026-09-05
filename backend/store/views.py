@@ -32,6 +32,7 @@ EMPTY_CART_MESSAGE = "Your cart is empty."
 ALREADY_OWNED_MESSAGE = (
     "Remove already owned games from your cart before checkout."
 )
+CART_ALREADY_OWNED_MESSAGE = "This game is already in your library."
 
 
 def get_cart_queryset():
@@ -133,6 +134,21 @@ class CartItemCreateView(APIView):
             context={"cart": cart},
         )
         serializer.is_valid(raise_exception=True)
+        game = serializer.validated_data["game"]
+        if LibraryItem.objects.filter(
+            user=request.user,
+            game=game,
+            order__user=request.user,
+            order__status=Order.Status.COMPLETED,
+        ).exists():
+            return Response(
+                {
+                    "code": "already_owned",
+                    "detail": CART_ALREADY_OWNED_MESSAGE,
+                    "game_ids": [game.pk],
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
         serializer.save()
         return Response(
             serialize_cart(cart, request),

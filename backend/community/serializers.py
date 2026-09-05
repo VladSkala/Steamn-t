@@ -1,13 +1,20 @@
 from django.db import IntegrityError, transaction
 from rest_framework import serializers
 
-from community.models import CommunityPost, GameReview, GameWishlist, PostComment
+from community.models import (
+    CommunityPost,
+    GameReview,
+    GameReviewImage,
+    GameWishlist,
+    PostComment,
+)
 from games.models import Game
 from games.serializers import GameListSerializer, GenreSerializer
-from store.models import LibraryItem
+from store.models import LibraryItem, Order
 
 
 DUPLICATE_WISHLIST_MESSAGE = "This game is already in your wishlist."
+OWNED_WISHLIST_MESSAGE = "This game is already in your library."
 
 
 class UserSummarySerializer(serializers.Serializer):
@@ -91,6 +98,13 @@ class WishlistItemCreateSerializer(serializers.ModelSerializer):
 
     def validate_game_id(self, game: Game) -> Game:
         user = self.context["request"].user
+        if LibraryItem.objects.filter(
+            user=user,
+            game=game,
+            order__user=user,
+            order__status=Order.Status.COMPLETED,
+        ).exists():
+            raise serializers.ValidationError(OWNED_WISHLIST_MESSAGE)
         if GameWishlist.objects.filter(user=user, game=game).exists():
             raise serializers.ValidationError(DUPLICATE_WISHLIST_MESSAGE)
         return game
@@ -202,12 +216,20 @@ class PostCommentSerializer(serializers.ModelSerializer):
         return body
 
 
+class GameReviewImageSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = GameReviewImage
+        fields = ("id", "image", "position")
+        read_only_fields = ("id", "position")
+
+
 class GameReviewSerializer(serializers.ModelSerializer):
     author = UserSummarySerializer(source="user", read_only=True)
+    images = GameReviewImageSerializer(many=True, read_only=True)
 
     class Meta:
         model = GameReview
-        fields = ("id", "author", "rating", "body", "created_at", "updated_at")
+        fields = ("id", "author", "rating", "body", "images", "created_at", "updated_at")
         read_only_fields = ("id", "author", "created_at", "updated_at")
 
     def validate_body(self, value: str) -> str:

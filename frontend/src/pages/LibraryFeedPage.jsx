@@ -1,78 +1,79 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
 import {
   createPostComment,
   getPostComments,
   togglePostReaction,
-} from '../api/library'
-import CatalogFeedback from '../components/CatalogFeedback'
-import LibraryFrame from '../components/library/LibraryFrame'
-import LibraryPostCard from '../components/library/LibraryPostCard'
-import useLibrary from '../hooks/useLibrary'
-import { useLibraryFeed } from '../hooks/useLibraryExperience'
+} from "../api/library";
+import CatalogFeedback from "../components/CatalogFeedback";
+import LibraryFrame from "../components/library/LibraryFrame";
+import LibraryPostCard from "../components/library/LibraryPostCard";
+import useLibrary from "../hooks/useLibrary";
+import { useLibraryFeed } from "../hooks/useLibraryExperience";
 
 const tabs = [
-  ['following', 'Following'],
-  ['library', 'From library'],
-  ['recommended', 'Recommended'],
-]
+  ["following", "Following"],
+  ["library", "From library"],
+  ["recommended", "Recommended"],
+];
 const kinds = [
-  ['all', 'All sections'],
-  ['forum', 'Forum'],
-  ['screenshot', 'Screenshots'],
-  ['video', 'Video'],
-  ['guide', 'Guides'],
-  ['news', 'News'],
-  ['community', 'Community'],
-]
+  ["all", "All sections"],
+  ["forum", "Forum"],
+  ["screenshot", "Screenshots"],
+  ["video", "Video"],
+  ["guide", "Guides"],
+  ["news", "News"],
+  ["community", "Community"],
+];
 
 function CommentThread({ post, onCreated }) {
-  const [comments, setComments] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [body, setBody] = useState('')
-  const [submitting, setSubmitting] = useState(false)
+  const [comments, setComments] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [body, setBody] = useState("");
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    const controller = new AbortController()
+    const controller = new AbortController();
     getPostComments(post.id, { signal: controller.signal })
       .then((items) => {
         if (!controller.signal.aborted) {
-          setComments(items)
-          setLoading(false)
+          setComments(items);
+          setLoading(false);
         }
       })
       .catch((requestError) => {
-        if (controller.signal.aborted) return
+        if (controller.signal.aborted) return;
         setError(
           requestError.response?.data?.detail ||
-            'Comments could not be loaded.',
-        )
-        setLoading(false)
-      })
-    return () => controller.abort()
-  }, [post.id])
+            "Comments could not be loaded.",
+        );
+        setLoading(false);
+      });
+    return () => controller.abort();
+  }, [post.id]);
 
   const submit = async (event) => {
-    event.preventDefault()
-    if (!body.trim()) return
-    setSubmitting(true)
-    setError('')
+    event.preventDefault();
+    if (!body.trim()) return;
+    setSubmitting(true);
+    setError("");
     try {
-      const comment = await createPostComment(post.id, body.trim())
-      setComments((current) => [...current, comment])
-      setBody('')
-      onCreated()
+      const comment = await createPostComment(post.id, body.trim());
+      setComments((current) => [...current, comment]);
+      setBody("");
+      onCreated();
     } catch (requestError) {
       setError(
         requestError.response?.data?.body?.[0] ||
           requestError.response?.data?.detail ||
-          'Your comment could not be published.',
-      )
+          "Your comment could not be published.",
+      );
     } finally {
-      setSubmitting(false)
+      setSubmitting(false);
     }
-  }
+  };
 
   return (
     <section
@@ -83,7 +84,7 @@ function CommentThread({ post, onCreated }) {
       {!loading && !comments.length && <p>Be the first to comment.</p>}
       {comments.map((comment) => (
         <article key={comment.id}>
-          <strong>{comment.author?.username || 'Steamnt player'}</strong>
+          <strong>{comment.author?.username || "Steamnt player"}</strong>
           <p>{comment.body}</p>
         </article>
       ))}
@@ -96,33 +97,33 @@ function CommentThread({ post, onCreated }) {
           onChange={(event) => setBody(event.target.value)}
         />
         <button type="submit" disabled={submitting || !body.trim()}>
-          {submitting ? 'Posting…' : 'Post'}
+          {submitting ? "Posting…" : "Post"}
         </button>
       </form>
       {error && <small role="alert">{error}</small>}
     </section>
-  )
+  );
 }
 
 function LibraryFeedPage() {
-  const sidebar = useLibrary()
-  const [tab, setTab] = useState('recommended')
-  const [kind, setKind] = useState('all')
-  const [ordering, setOrdering] = useState('popular')
-  const [searchInput, setSearchInput] = useState('')
-  const [search, setSearch] = useState('')
-  const [openPostId, setOpenPostId] = useState(null)
+  const sidebar = useLibrary();
+  const [tab, setTab] = useState("recommended");
+  const [kind, setKind] = useState("all");
+  const [ordering, setOrdering] = useState("popular");
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [openPostId, setOpenPostId] = useState(null);
   const { data, loading, error, retry, updatePost } = useLibraryFeed({
     tab,
     kind,
     search,
     ordering,
-  })
+  });
 
   const like = async (post) =>
-    updatePost(post.id, await togglePostReaction(post.id))
+    updatePost(post.id, await togglePostReaction(post.id));
   const commentCreated = (post) =>
-    updatePost(post.id, { comment_count: post.comment_count + 1 })
+    updatePost(post.id, { comment_count: post.comment_count + 1 });
 
   return (
     <LibraryFrame
@@ -131,13 +132,19 @@ function LibraryFeedPage() {
       className="library-feed-page"
     >
       <div className="library-feed-heading">
-        <span>←</span>
+        <Link
+          className="library-feed-back"
+          to="/library"
+          aria-label="Back to library"
+        >
+          ←
+        </Link>
         <nav aria-label="Feed sources">
           {tabs.map(([id, label]) => (
             <button
               type="button"
               key={id}
-              className={tab === id ? 'active' : ''}
+              className={tab === id ? "active" : ""}
               onClick={() => setTab(id)}
             >
               {label}
@@ -179,10 +186,10 @@ function LibraryFeedPage() {
               <button
                 type="button"
                 onClick={() => {
-                  setTab('recommended')
-                  setKind('all')
-                  setSearch('')
-                  setSearchInput('')
+                  setTab("recommended");
+                  setKind("all");
+                  setSearch("");
+                  setSearchInput("");
                 }}
               >
                 Reset feed
@@ -226,8 +233,8 @@ function LibraryFeedPage() {
           </label>
           <form
             onSubmit={(event) => {
-              event.preventDefault()
-              setSearch(searchInput.trim())
+              event.preventDefault();
+              setSearch(searchInput.trim());
             }}
           >
             <input
@@ -244,7 +251,7 @@ function LibraryFeedPage() {
               <button
                 type="button"
                 key={id}
-                className={kind === id ? 'active' : ''}
+                className={kind === id ? "active" : ""}
                 onClick={() => setKind(id)}
               >
                 {label}
@@ -254,7 +261,7 @@ function LibraryFeedPage() {
         </aside>
       </div>
     </LibraryFrame>
-  )
+  );
 }
 
-export default LibraryFeedPage
+export default LibraryFeedPage;

@@ -1,123 +1,135 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { useEffect, useRef, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
-import CatalogFeedback from '../components/CatalogFeedback'
-import { checkoutCart } from '../api/checkout'
-import { useCart } from '../hooks/useCart'
+import CatalogFeedback from "../components/CatalogFeedback";
+import { checkoutCart } from "../api/checkout";
+import { useCart } from "../hooks/useCart";
+import { useWishlist } from "../hooks/useWishlist";
 
-const priceFormatter = new Intl.NumberFormat('en-US', {
-  style: 'currency',
-  currency: 'USD',
-})
+const priceFormatter = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+});
 
 const formatPrice = (price) => {
-  const numericPrice = Number(price)
+  const numericPrice = Number(price);
 
   if (!Number.isFinite(numericPrice)) {
-    return 'Price unavailable'
+    return "Price unavailable";
   }
 
   if (numericPrice === 0) {
-    return 'Free'
+    return "Free";
   }
 
-  return priceFormatter.format(numericPrice)
-}
+  return priceFormatter.format(numericPrice);
+};
 
 const getCheckoutError = (error) =>
   error?.response?.data?.detail ||
   error?.message ||
-  'Demo payment could not be completed. Please try again.'
+  "Demo payment could not be completed. Please try again.";
 
 const isCanceledRequest = (error) =>
-  error?.code === 'ERR_CANCELED' ||
-  error?.name === 'CanceledError' ||
-  error?.name === 'AbortError'
+  error?.code === "ERR_CANCELED" ||
+  error?.name === "CanceledError" ||
+  error?.name === "AbortError";
 
 function CheckoutPage() {
-  const navigate = useNavigate()
-  const {
-    cart,
-    isLoading,
-    error,
-    refreshCart,
-    removeFromCart,
-    clearCart,
-  } = useCart()
-  const [isPaying, setIsPaying] = useState(false)
-  const [checkoutError, setCheckoutError] = useState('')
-  const [alreadyOwnedGameIds, setAlreadyOwnedGameIds] = useState([])
-  const mountedRef = useRef(true)
-  const checkoutControllerRef = useRef(null)
-  const payingRef = useRef(false)
+  const navigate = useNavigate();
+  const { cart, isLoading, error, refreshCart, removeFromCart, clearCart } =
+    useCart();
+  const { refreshWishlist, removePurchasedGames } = useWishlist();
+  const [isPaying, setIsPaying] = useState(false);
+  const [checkoutError, setCheckoutError] = useState("");
+  const [alreadyOwnedGameIds, setAlreadyOwnedGameIds] = useState([]);
+  const mountedRef = useRef(true);
+  const checkoutControllerRef = useRef(null);
+  const payingRef = useRef(false);
 
-  useEffect(() => () => {
-    mountedRef.current = false
-    checkoutControllerRef.current?.abort()
-  }, [])
+  useEffect(
+    () => () => {
+      mountedRef.current = false;
+      checkoutControllerRef.current?.abort();
+    },
+    [],
+  );
 
-  const items = Array.isArray(cart?.items) ? cart.items : []
+  const items = Array.isArray(cart?.items) ? cart.items : [];
 
   const handleRetry = () => {
-    setCheckoutError('')
-    setAlreadyOwnedGameIds([])
-    refreshCart().catch(() => {})
-  }
+    setCheckoutError("");
+    setAlreadyOwnedGameIds([]);
+    refreshCart().catch(() => {});
+  };
 
   const handlePayDemo = async () => {
-    if (payingRef.current) return
+    if (payingRef.current) return;
 
-    const controller = new AbortController()
-    checkoutControllerRef.current = controller
-    payingRef.current = true
-    setIsPaying(true)
-    setCheckoutError('')
-    setAlreadyOwnedGameIds([])
+    const controller = new AbortController();
+    checkoutControllerRef.current = controller;
+    payingRef.current = true;
+    setIsPaying(true);
+    setCheckoutError("");
+    setAlreadyOwnedGameIds([]);
 
     try {
-      const order = await checkoutCart({ signal: controller.signal })
+      const order = await checkoutCart({ signal: controller.signal });
 
-      if (controller.signal.aborted || !mountedRef.current) return
+      if (controller.signal.aborted || !mountedRef.current) return;
 
-      clearCart()
-      navigate('/library', {
+      const purchasedGameIds = Array.isArray(order?.items)
+        ? order.items
+            .map((item) => item?.game?.id)
+            .filter((gameId) => gameId != null)
+        : items
+            .map((item) => item?.game?.id)
+            .filter((gameId) => gameId != null);
+
+      removePurchasedGames(purchasedGameIds);
+      refreshWishlist().catch(() => {});
+      clearCart();
+      navigate("/library", {
         replace: true,
         state: {
           checkoutSuccess: true,
           order,
         },
-      })
+      });
     } catch (requestError) {
-      if (isCanceledRequest(requestError) || !mountedRef.current) return
+      if (isCanceledRequest(requestError) || !mountedRef.current) return;
 
-      const responseData = requestError?.response?.data
+      const responseData = requestError?.response?.data;
       const ownedIds = Array.isArray(responseData?.game_ids)
         ? responseData.game_ids.map(String)
-        : []
+        : [];
 
-      if (responseData?.code === 'already_owned') {
-        setAlreadyOwnedGameIds(ownedIds)
+      if (responseData?.code === "already_owned") {
+        setAlreadyOwnedGameIds(ownedIds);
         const ownedTitles = items
           .filter((item) => ownedIds.includes(String(item?.game?.id)))
           .map((item) => item?.game?.title)
-          .filter(Boolean)
+          .filter(Boolean);
 
-        const titleMessage = ownedTitles.length > 0
-          ? `${ownedTitles.join(', ')} ${ownedTitles.length === 1 ? 'is' : 'are'} already in your library.`
-          : 'One or more games are already in your library.'
+        const titleMessage =
+          ownedTitles.length > 0
+            ? `${ownedTitles.join(", ")} ${ownedTitles.length === 1 ? "is" : "are"} already in your library.`
+            : "One or more games are already in your library.";
 
-        setCheckoutError(`${titleMessage} Remove ${ownedTitles.length === 1 ? 'it' : 'them'} from your cart before checkout.`)
+        setCheckoutError(
+          `${titleMessage} Remove ${ownedTitles.length === 1 ? "it" : "them"} from your cart before checkout.`,
+        );
       } else {
-        setCheckoutError(getCheckoutError(requestError))
+        setCheckoutError(getCheckoutError(requestError));
       }
     } finally {
       if (checkoutControllerRef.current === controller) {
-        checkoutControllerRef.current = null
-        payingRef.current = false
-        if (mountedRef.current) setIsPaying(false)
+        checkoutControllerRef.current = null;
+        payingRef.current = false;
+        if (mountedRef.current) setIsPaying(false);
       }
     }
-  }
+  };
 
   if (isLoading && !cart) {
     return (
@@ -128,7 +140,7 @@ function CheckoutPage() {
           message="Preparing your order summary."
         />
       </div>
-    )
+    );
   }
 
   if (error && !cart) {
@@ -144,7 +156,7 @@ function CheckoutPage() {
           Back to cart
         </Link>
       </div>
-    )
+    );
   }
 
   if (items.length === 0) {
@@ -160,7 +172,7 @@ function CheckoutPage() {
           </Link>
         </section>
       </div>
-    )
+    );
   }
 
   return (
@@ -183,27 +195,32 @@ function CheckoutPage() {
             <strong>Payment failed</strong>
             <span>{checkoutError}</span>
           </div>
-          <button type="button" onClick={() => setCheckoutError('')}>
+          <button type="button" onClick={() => setCheckoutError("")}>
             Dismiss
           </button>
         </div>
       )}
 
       <div className="checkout-layout">
-        <section className="checkout-card" aria-labelledby="checkout-items-title">
+        <section
+          className="checkout-card"
+          aria-labelledby="checkout-items-title"
+        >
           <div className="checkout-card-heading">
             <div>
               <span className="section-kicker">ORDER</span>
               <h2 id="checkout-items-title">Your games</h2>
             </div>
-            <span>{items.length} {items.length === 1 ? 'game' : 'games'}</span>
+            <span>
+              {items.length} {items.length === 1 ? "game" : "games"}
+            </span>
           </div>
 
           <div className="checkout-items">
             {items.map((item) => {
-              const game = item.game
-              const title = game?.title || 'Untitled game'
-              const gameId = game?.id
+              const game = item.game;
+              const title = game?.title || "Untitled game";
+              const gameId = game?.id;
 
               return (
                 <article className="checkout-item" key={item.id}>
@@ -214,14 +231,14 @@ function CheckoutPage() {
                         src={game.cover}
                         alt=""
                         onError={(event) => {
-                          event.currentTarget.hidden = true
+                          event.currentTarget.hidden = true;
                         }}
                       />
                     )}
                   </div>
                   <div className="checkout-item-info">
                     <Link to={`/games/${gameId}`}>{title}</Link>
-                    <span>{game?.developer || 'Steamn’t catalog'}</span>
+                    <span>{game?.developer || "Steamn’t catalog"}</span>
                   </div>
                   <strong>{formatPrice(game?.price)}</strong>
                   {alreadyOwnedGameIds.includes(String(gameId)) && (
@@ -229,15 +246,15 @@ function CheckoutPage() {
                       type="button"
                       className="checkout-remove-owned"
                       onClick={async () => {
-                        setCheckoutError('')
-                        setAlreadyOwnedGameIds([])
+                        setCheckoutError("");
+                        setAlreadyOwnedGameIds([]);
                         try {
-                          await removeFromCart(gameId)
+                          await removeFromCart(gameId);
                         } catch (removeError) {
                           setCheckoutError(
                             removeError?.response?.data?.detail ||
-                            'Unable to remove this game from your cart.',
-                          )
+                              "Unable to remove this game from your cart.",
+                          );
                         }
                       }}
                     >
@@ -245,7 +262,7 @@ function CheckoutPage() {
                     </button>
                   )}
                 </article>
-              )
+              );
             })}
           </div>
         </section>
@@ -267,7 +284,7 @@ function CheckoutPage() {
             onClick={handlePayDemo}
             disabled={isPaying}
           >
-            {isPaying ? 'Processing…' : 'Pay Demo'}
+            {isPaying ? "Processing…" : "Pay Demo"}
           </button>
 
           <p>
@@ -277,7 +294,7 @@ function CheckoutPage() {
         </aside>
       </div>
     </div>
-  )
+  );
 }
 
-export default CheckoutPage
+export default CheckoutPage;

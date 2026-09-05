@@ -12,6 +12,7 @@ from rest_framework.test import APITestCase
 
 from community.models import GameWishlist
 from games.models import Game, Genre
+from store.models import LibraryItem, Order
 
 
 User = get_user_model()
@@ -126,6 +127,35 @@ class WishlistAPITests(APITestCase):
             [item["game"]["id"] for item in response.data["items"]],
             [self.second_game.pk, self.first_game.pk],
         )
+
+    def test_list_hides_stale_items_for_games_the_user_already_owns(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_price=self.first_game.price,
+            status=Order.Status.COMPLETED,
+        )
+        LibraryItem.objects.create(
+            user=self.user,
+            game=self.first_game,
+            order=order,
+        )
+        stale_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.first_game,
+        )
+        visible_item = GameWishlist.objects.create(
+            user=self.user,
+            game=self.second_game,
+        )
+
+        response = self.client.get(self.list_url)
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            [item["id"] for item in response.data["items"]],
+            [visible_item.pk],
+        )
+        self.assertTrue(GameWishlist.objects.filter(pk=stale_item.pk).exists())
 
     def test_duplicate_game_is_rejected_without_creating_another_item(self):
         first_response = self.client.post(

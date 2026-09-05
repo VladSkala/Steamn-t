@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from community.models import GameWishlist
 from games.models import Game, Genre
 from store.models import CartItem, LibraryItem, Order, OrderItem
 
@@ -40,6 +41,8 @@ class CoreMVPJourneyAPITests(APITestCase):
         self.cart_items_url = reverse("store:cart-item-create")
         self.checkout_url = reverse("store:order-checkout")
         self.library_url = reverse("store:library")
+        self.wishlist_url = reverse("community:wishlist")
+        self.wishlist_items_url = reverse("community:wishlist-item-create")
 
     def test_register_login_catalog_cart_checkout_library_and_profile(self):
         register_response = self.client.post(
@@ -96,6 +99,24 @@ class CoreMVPJourneyAPITests(APITestCase):
         self.assertEqual(len(catalog_response.data), 1)
         self.assertEqual(catalog_response.data[0]["id"], self.game.pk)
 
+        wishlist_add_response = self.client.post(
+            self.wishlist_items_url,
+            {"game_id": self.game.pk},
+            format="json",
+        )
+        self.assertEqual(
+            wishlist_add_response.status_code,
+            status.HTTP_201_CREATED,
+        )
+        wishlist_before_checkout = self.client.get(self.wishlist_url)
+        self.assertEqual(
+            [
+                item["game"]["id"]
+                for item in wishlist_before_checkout.data["items"]
+            ],
+            [self.game.pk],
+        )
+
         add_response = self.client.post(
             self.cart_items_url,
             {"game_id": self.game.pk},
@@ -127,6 +148,11 @@ class CoreMVPJourneyAPITests(APITestCase):
         self.assertEqual(order_item.price_at_purchase, Decimal("24.99"))
         self.assertEqual(library_item.order, order)
         self.assertFalse(CartItem.objects.filter(cart__user=user).exists())
+        self.assertFalse(GameWishlist.objects.filter(user=user).exists())
+
+        wishlist_after_checkout = self.client.get(self.wishlist_url)
+        self.assertEqual(wishlist_after_checkout.status_code, status.HTTP_200_OK)
+        self.assertEqual(wishlist_after_checkout.data, {"items": []})
 
         empty_cart_response = self.client.get(self.cart_url)
         self.assertEqual(empty_cart_response.status_code, status.HTTP_200_OK)

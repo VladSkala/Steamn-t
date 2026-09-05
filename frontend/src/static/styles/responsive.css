@@ -27,15 +27,13 @@
   .hero-content,
   .hero-content h1,
   .hero-content p,
-  .home-bottom-cta,
   .catalog-hero {
     min-width: 0;
   }
 
   .hero h1,
   .catalog-hero h1,
-  .profile-hero h1,
-  .home-bottom-cta h2 {
+  .profile-hero h1 {
     overflow-wrap: anywhere;
     word-break: break-word;
   }
@@ -176,10 +174,6 @@
 
   .catalog-card.list-view .game-card-content {
     min-width: 0;
-  }
-
-  .home-bottom-cta {
-    padding: 28px;
   }
 }
 

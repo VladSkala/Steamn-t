@@ -86,3 +86,24 @@ class Game(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+class GameScreenshot(models.Model):
+    """Ordered artwork displayed by the existing public game detail endpoint."""
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="screenshots")
+    image = models.ImageField(
+        upload_to="games/screenshots/%Y/%m/",
+        validators=[
+            FileExtensionValidator(["jpg", "jpeg", "png", "webp"]),
+            validate_image_size,
+        ],
+    )
+    caption = models.CharField(max_length=160, blank=True)
+    position = models.PositiveSmallIntegerField(default=0)
+
+    class Meta:
+        ordering = ["position", "pk"]
+
+    def __str__(self):
+        return self.caption or f"{self.game.title} — image {self.position + 1}"

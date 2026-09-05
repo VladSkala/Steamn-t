@@ -1,51 +1,53 @@
-import { useEffect, useRef, useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
-import { useAuth } from '../hooks/useAuth'
-import { useCart } from '../hooks/useCart'
+import { useEffect, useRef, useState } from "react";
+import { Link, NavLink } from "react-router-dom";
+import { useAuth } from "../hooks/useAuth";
+import { useCart } from "../hooks/useCart";
+import { useWishlist } from "../hooks/useWishlist";
 
 const navigationItems = [
-  { label: 'Home', to: '/' },
-  { label: 'Catalog', to: '/catalog' },
-  { label: 'Library', to: '/library', requiresAuth: true },
-]
+  { label: "Home", to: "/" },
+  { label: "Catalog", to: "/catalog" },
+  { label: "Library", to: "/library", requiresAuth: true },
+];
 
 function Header() {
-  const [menuOpen, setMenuOpen] = useState(false)
-  const { isAuthenticated, logout } = useAuth()
-  const { itemCount } = useCart()
-  const headerRef = useRef(null)
+  const [menuOpen, setMenuOpen] = useState(false);
+  const { isAuthenticated, logout } = useAuth();
+  const { itemCount } = useCart();
+  const { itemCount: wishlistItemCount } = useWishlist();
+  const headerRef = useRef(null);
 
-  const closeMenu = () => setMenuOpen(false)
+  const closeMenu = () => setMenuOpen(false);
 
   useEffect(() => {
     const handleEscape = (event) => {
-      if (event.key === 'Escape') {
-        setMenuOpen(false)
+      if (event.key === "Escape") {
+        setMenuOpen(false);
       }
-    }
+    };
 
     const handlePointerDown = (event) => {
       if (menuOpen && !headerRef.current?.contains(event.target)) {
-        setMenuOpen(false)
+        setMenuOpen(false);
       }
-    }
+    };
 
     const handleResize = () => {
       if (window.innerWidth > 700) {
-        setMenuOpen(false)
+        setMenuOpen(false);
       }
-    }
+    };
 
-    document.addEventListener('keydown', handleEscape)
-    document.addEventListener('pointerdown', handlePointerDown)
-    window.addEventListener('resize', handleResize)
+    document.addEventListener("keydown", handleEscape);
+    document.addEventListener("pointerdown", handlePointerDown);
+    window.addEventListener("resize", handleResize);
 
     return () => {
-      document.removeEventListener('keydown', handleEscape)
-      document.removeEventListener('pointerdown', handlePointerDown)
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [menuOpen])
+      document.removeEventListener("keydown", handleEscape);
+      document.removeEventListener("pointerdown", handlePointerDown);
+      window.removeEventListener("resize", handleResize);
+    };
+  }, [menuOpen]);
 
   return (
     <header ref={headerRef} className="site-header">
@@ -58,10 +60,10 @@ function Header() {
 
         <button
           type="button"
-          className={`menu-toggle${menuOpen ? ' is-open' : ''}`}
+          className={`menu-toggle${menuOpen ? " is-open" : ""}`}
           aria-expanded={menuOpen}
           aria-controls="main-header-menu"
-          aria-label={menuOpen ? 'Close navigation' : 'Open navigation'}
+          aria-label={menuOpen ? "Close navigation" : "Open navigation"}
           onClick={() => setMenuOpen((value) => !value)}
         >
           <span />
@@ -71,7 +73,7 @@ function Header() {
 
         <div
           id="main-header-menu"
-          className={`header-menu${menuOpen ? ' is-open' : ''}`}
+          className={`header-menu${menuOpen ? " is-open" : ""}`}
         >
           <nav className="main-nav" aria-label="Main navigation">
             {navigationItems
@@ -80,9 +82,9 @@ function Header() {
                 <NavLink
                   key={item.label}
                   to={item.to}
-                  end={item.to === '/'}
+                  end={item.to === "/"}
                   className={({ isActive }) =>
-                    `nav-link${isActive ? ' active' : ''}`
+                    `nav-link ui-nav-tab${isActive ? " active" : ""}`
                   }
                   onClick={closeMenu}
                 >
@@ -92,11 +94,31 @@ function Header() {
           </nav>
 
           <div className="header-actions">
+            {isAuthenticated && (
+              <NavLink
+                to="/wishlist"
+                className={({ isActive }) =>
+                  `cart-header-link wishlist-header-link${isActive ? " active" : ""}`
+                }
+                onClick={closeMenu}
+                aria-label={`Wishlist, ${wishlistItemCount} ${wishlistItemCount === 1 ? "game" : "games"}`}
+                title="Wishlist"
+              >
+                <span className="wishlist-header-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24" focusable="false">
+                    <path d="M20.8 4.6a5.5 5.5 0 0 0-7.8 0L12 5.7l-1.1-1.1a5.5 5.5 0 0 0-7.8 7.8l1.1 1.1L12 21l7.7-7.5 1.1-1.1a5.5 5.5 0 0 0 0-7.8Z" />
+                  </svg>
+                </span>
+                {wishlistItemCount > 0 && (
+                  <b className="wishlist-header-count">{wishlistItemCount}</b>
+                )}
+              </NavLink>
+            )}
             <Link
               to="/cart"
               className="cart-header-link"
               onClick={closeMenu}
-              aria-label={`Cart, ${itemCount} ${itemCount === 1 ? 'item' : 'items'}`}
+              aria-label={`Cart, ${itemCount} ${itemCount === 1 ? "item" : "items"}`}
             >
               <span className="cart-header-icon" aria-hidden="true">
                 <svg viewBox="0 0 24 24" focusable="false">
@@ -122,8 +144,8 @@ function Header() {
                   type="button"
                   className="signup-button"
                   onClick={() => {
-                    logout()
-                    closeMenu()
+                    logout();
+                    closeMenu();
                   }}
                 >
                   Logout
@@ -147,7 +169,7 @@ function Header() {
         </div>
       </div>
     </header>
-  )
+  );
 }
 
-export default Header
+export default Header;

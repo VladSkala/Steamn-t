@@ -97,8 +97,10 @@ class CatalogAPITests(APITestCase):
                 "developer",
                 "release_date",
                 "genres",
+                "is_owned",
             },
         )
+        self.assertFalse(first_game["is_owned"])
         self.assertEqual(first_game["price"], "9.50")
         self.assertEqual(first_game["developer"], "Alpha Studio")
         self.assertEqual(first_game["release_date"], "2026-01-10")
@@ -337,9 +339,13 @@ class GameDetailAPITests(APITestCase):
                 "developer",
                 "release_date",
                 "requirements",
+                "hero_image_url",
+                "screenshots",
                 "genres",
+                "is_owned",
             },
         )
+        self.assertFalse(response.data["is_owned"])
 
     def test_game_detail_returns_full_values_and_nested_genres(self):
         response = self.client.get(self.url)
@@ -406,7 +412,7 @@ class GameDetailAPITests(APITestCase):
                 )
 
     def test_game_detail_prefetches_genres(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = self.client.get(self.url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

@@ -8,6 +8,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
+from community.models import GameWishlist
 from games.models import Game
 from store.models import CartItem, LibraryItem, Order, OrderItem
 
@@ -55,6 +56,8 @@ class CheckoutIntegrationAPITests(APITestCase):
         return response
 
     def test_complete_multi_game_checkout_flow_through_public_api(self):
+        GameWishlist.objects.create(user=self.user, game=self.first_game)
+        GameWishlist.objects.create(user=self.user, game=self.second_game)
         self.add_game_to_cart(self.first_game)
         self.add_game_to_cart(self.second_game)
 
@@ -115,6 +118,7 @@ class CheckoutIntegrationAPITests(APITestCase):
         self.assertEqual(cart_after_checkout.data["items"], [])
         self.assertEqual(cart_after_checkout.data["total"], "0.00")
         self.assertFalse(CartItem.objects.filter(cart__user=self.user).exists())
+        self.assertFalse(GameWishlist.objects.filter(user=self.user).exists())
 
     def test_checkout_rejects_empty_cart_through_public_api(self):
         cart_response = self.client.get(self.cart_url)
@@ -136,7 +140,7 @@ class CheckoutIntegrationAPITests(APITestCase):
         self.assertFalse(OrderItem.objects.filter(order__user=self.user).exists())
         self.assertFalse(LibraryItem.objects.filter(user=self.user).exists())
 
-    def test_checkout_rejects_repeat_purchase_through_public_api(self):
+    def test_cart_rejects_repeat_purchase_through_public_api(self):
         self.add_game_to_cart(self.first_game)
         first_checkout = self.client.post(
             self.checkout_url,
@@ -145,25 +149,36 @@ class CheckoutIntegrationAPITests(APITestCase):
         )
         self.assertEqual(first_checkout.status_code, status.HTTP_201_CREATED)
 
-        self.add_game_to_cart(self.first_game)
-        repeat_checkout = self.client.post(
-            self.checkout_url,
-            {},
+        repeat_add = self.client.post(
+            self.cart_items_url,
+            {"game_id": self.first_game.pk},
             format="json",
         )
 
+        self.assertEqual(repeat_add.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(repeat_add.data["code"], "already_owned")
+        self.assertEqual(repeat_add.data["game_ids"], [self.first_game.pk])
         self.assertEqual(
-            repeat_checkout.status_code,
-            status.HTTP_400_BAD_REQUEST,
+            repeat_add.data["detail"],
+            "This game is already in your library.",
         )
-        self.assertEqual(repeat_checkout.data["code"], "already_owned")
-        self.assertEqual(repeat_checkout.data["game_ids"], [self.first_game.pk])
         self.assertEqual(Order.objects.filter(user=self.user).count(), 1)
         self.assertEqual(OrderItem.objects.filter(order__user=self.user).count(), 1)
         self.assertEqual(LibraryItem.objects.filter(user=self.user).count(), 1)
-        self.assertTrue(
+        self.assertFalse(
             CartItem.objects.filter(
                 cart__user=self.user,
                 game=self.first_game,
             ).exists(),
         )
+
+        empty_checkout = self.client.post(
+            self.checkout_url,
+            {},
+            format="json",
+        )
+        self.assertEqual(
+            empty_checkout.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        self.assertEqual(empty_checkout.data["code"], "empty_cart")

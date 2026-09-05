@@ -1,0 +1,273 @@
+:root {
+  --font-ui:
+    "SF Pro Text", "SF Pro Display", -apple-system, BlinkMacSystemFont,
+    "Segoe UI Variable", "Segoe UI", system-ui, sans-serif;
+  --v6-panel: rgba(15, 20, 35, 0.92);
+  --v6-panel-strong: #141a2b;
+  --v6-line: rgba(151, 164, 255, 0.16);
+  --v6-line-strong: rgba(151, 164, 255, 0.3);
+}
+html,
+body,
+button,
+input,
+select,
+textarea {
+  font-family: var(--font-ui);
+}
+body {
+  font-size: 15px;
+  font-weight: 450;
+  letter-spacing: -0.006em;
+}
+button,
+input,
+select,
+textarea {
+  letter-spacing: inherit;
+}
+.store-page-title {
+  width: min(100%, var(--content-width, 1360px));
+  margin: 0 auto 26px;
+  padding: 8px 0 20px;
+  border-bottom: 1px solid var(--v6-line);
+}
+.store-page-title h1 {
+  margin: 0;
+  color: #f8f6ff;
+  font-size: clamp(2rem, 4vw, 3.15rem);
+  font-weight: 760;
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+.catalog-page,
+.wishlist-page,
+.cart-page,
+.library-page {
+  width: min(calc(100% - 40px), var(--content-width, 1360px));
+  margin-inline: auto;
+}
+.catalog-page .store-page-title,
+.wishlist-page .store-page-title,
+.cart-page .store-page-title,
+.library-page .store-page-title {
+  width: 100%;
+}
+
+/* Shared Catalog/Library toolbar */
+.library-shell {
+  width: 100%;
+  grid-template-columns: minmax(210px, 248px) minmax(0, 1fr);
+  gap: 22px;
+}
+.library-main {
+  min-width: 0;
+}
+.library-plus-icon {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  display: inline-block;
+}
+.library-plus-icon::before,
+.library-plus-icon::after {
+  content: "";
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 14px;
+  height: 2px;
+  border-radius: 999px;
+  background: currentColor;
+  transform: translate(-50%, -50%);
+}
+.library-plus-icon::after {
+  transform: translate(-50%, -50%) rotate(90deg);
+}
+.library-game-tabs {
+  scrollbar-width: none;
+  overflow-x: visible;
+  flex-wrap: wrap;
+}
+.library-game-tabs::-webkit-scrollbar {
+  display: none;
+}
+
+/* Cart */
+.cart-topline {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 18px;
+  margin: -8px 0 20px;
+  color: #8e92a9;
+  font-size: 0.82rem;
+}
+.cart-item {
+  border-color: var(--v6-line);
+  background: linear-gradient(
+    140deg,
+    rgba(20, 26, 43, 0.96),
+    rgba(10, 13, 25, 0.96)
+  );
+}
+.cart-summary {
+  border-color: rgba(160, 151, 255, 0.24);
+  background:
+    radial-gradient(
+      circle at 85% 8%,
+      rgba(156, 104, 255, 0.18),
+      transparent 28%
+    ),
+    linear-gradient(145deg, #171d31, #0e1220);
+}
+.cart-empty-state {
+  border: 1px solid var(--v6-line);
+  background:
+    radial-gradient(circle at 50% 0, rgba(136, 97, 255, 0.2), transparent 38%),
+    var(--v6-panel);
+}
+.cart-empty-state h2 {
+  margin: 0;
+  color: #f5f3ff;
+  font-size: clamp(1.7rem, 4vw, 2.6rem);
+}
+
+/* Review photos */
+.library-review-photo-field {
+  display: grid;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid var(--v6-line);
+  border-radius: 14px;
+  background: rgba(8, 11, 21, 0.52);
+}
+.library-review-photo-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 14px;
+  align-items: flex-start;
+  color: #a3a7bb;
+  font-size: 0.76rem;
+}
+.library-review-photo-heading > div {
+  display: grid;
+  gap: 3px;
+}
+.library-review-photo-heading strong {
+  color: #eceaf6;
+  font-size: 0.86rem;
+}
+.library-review-gallery {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 14px;
+}
+.library-review-gallery.is-editing {
+  margin-top: 0;
+}
+.library-review-image-tile {
+  position: relative;
+  overflow: hidden;
+  margin: 0;
+  aspect-ratio: 4/3;
+  border: 1px solid var(--v6-line);
+  border-radius: 11px;
+  background: #090b16;
+}
+.library-review-image-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.library-review-image-tile button {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(6, 8, 17, 0.82);
+  font-size: 1.1rem;
+}
+.library-review-upload {
+  width: max-content;
+  min-height: 38px;
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center;
+  gap: 7px !important;
+  padding: 0 13px;
+  border: 1px solid var(--v6-line-strong);
+  border-radius: 10px;
+  color: #d9dcf0 !important;
+  background: rgba(28, 34, 56, 0.72);
+  font-size: 0.78rem;
+  font-weight: 720;
+  cursor: pointer;
+}
+.library-review-upload input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+}
+.library-review-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 9px;
+}
+
+/* Existing modal/dialog palette alignment */
+.library-dialog-backdrop,
+.wishlist-confirm-backdrop {
+  backdrop-filter: blur(10px);
+  background: rgba(3, 5, 13, 0.74);
+}
+.library-dialog,
+.wishlist-confirm-dialog {
+  border-color: var(--v6-line-strong);
+  background:
+    radial-gradient(circle at 92% 0, rgba(147, 96, 255, 0.16), transparent 30%),
+    #111625;
+  box-shadow: 0 35px 90px rgba(0, 0, 0, 0.56);
+}
+@media (max-width: 780px) {
+  .catalog-page,
+  .wishlist-page,
+  .cart-page,
+  .library-page,
+  .home-page,
+  .game-details-page {
+    width: min(calc(100% - 24px), 1420px);
+  }
+  .store-page-title {
+    margin-bottom: 18px;
+    padding-bottom: 15px;
+  }
+  .library-shell {
+    grid-template-columns: 1fr;
+  }
+  .quick-features {
+    grid-template-columns: 1fr;
+    margin-bottom: 50px;
+  }
+  .library-review-gallery {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .cart-topline {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+@media (max-width: 520px) {
+  .library-review-gallery {
+    grid-template-columns: 1fr;
+  }
+}

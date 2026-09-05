@@ -1,7 +1,8 @@
 from django.contrib.auth import get_user_model
+from django.db import transaction
 from django.db.models import Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
-from rest_framework import status
+from rest_framework import serializers, status
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -16,6 +17,7 @@ from community.models import (
 )
 from community.serializers import (
     CommunityPostSerializer,
+    GameReviewImageSerializer,
     GameReviewSerializer,
     OwnedGameSerializer,
     OwnedLibraryItemSerializer,
@@ -74,10 +76,11 @@ def get_owned_library_item(user, game_id: int) -> LibraryItem:
 
 
 def get_wishlist_queryset(user):
-    """Return one user's wishlist with all embedded game data preloaded."""
+    """Return one user's unowned wishlist with embedded game data preloaded."""
 
     return (
         GameWishlist.objects.filter(user=user)
+        .exclude(game_id__in=get_owned_game_ids(user))
         .select_related("game")
         .prefetch_related("game__genres")
         .order_by("-created_at", "-pk")
@@ -201,10 +204,14 @@ class LibraryGameView(APIView):
             pk__in=following_ids,
             game_wishlist_items__game=game,
         ).distinct()[:12]
-        review = GameReview.objects.filter(
-            user=request.user,
-            game=game,
-        ).first()
+        review = (
+            GameReview.objects.prefetch_related("images")
+            .filter(
+                user=request.user,
+                game=game,
+            )
+            .first()
+        )
 
         context = {"request": request}
         return Response(
@@ -315,10 +322,9 @@ class LibraryFeedView(APIView):
 
 
 class GameReviewView(APIView):
-    """Create, update, or remove the caller's owned-game review."""
-
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "put", "patch", "delete", "options")
+    max_images = 4
 
     def post(self, request, game_id: int):
         return self._save(request, game_id, partial=False)
@@ -329,32 +335,56 @@ class GameReviewView(APIView):
     def patch(self, request, game_id: int):
         return self._save(request, game_id, partial=True)
 
+    @staticmethod
+    def _keep_image_ids(request):
+        raw_values = request.data.getlist("keep_image_ids") if hasattr(request.data, "getlist") else request.data.get("keep_image_ids", [])
+        if not isinstance(raw_values, (list, tuple)):
+            raw_values = [raw_values] if raw_values not in (None, "") else []
+        try:
+            return list(dict.fromkeys(int(value) for value in raw_values))
+        except (TypeError, ValueError) as error:
+            raise serializers.ValidationError({"images": "Every kept review image must have a valid id."}) from error
+
     def _save(self, request, game_id: int, partial: bool):
         item = get_owned_library_item(request.user, game_id)
-        review = GameReview.objects.filter(
-            user=request.user,
-            game=item.game,
-        ).first()
-        serializer = GameReviewSerializer(
-            review,
-            data=request.data,
-            partial=partial or review is not None,
-            context={"request": request},
-        )
+        review = GameReview.objects.prefetch_related("images").filter(user=request.user, game=item.game).first()
+        serializer = GameReviewSerializer(review, data=request.data, partial=partial or review is not None, context={"request": request})
         serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user, game=item.game)
-        return Response(
-            serializer.data,
-            status=status.HTTP_200_OK if review else status.HTTP_201_CREATED,
-        )
+        image_changes = "replace_images" in request.data or "images" in request.FILES
+        uploads = request.FILES.getlist("images")
+        keep_ids = self._keep_image_ids(request) if image_changes else []
+        if any(image_id <= 0 for image_id in keep_ids):
+            raise serializers.ValidationError({"images": "Every kept review image must have a valid id."})
+        existing_ids = set(review.images.values_list("pk", flat=True) if review else [])
+        if set(keep_ids) - existing_ids:
+            raise serializers.ValidationError({"images": "A kept image does not belong to this review."})
+        if len(keep_ids) + len(uploads) > self.max_images:
+            raise serializers.ValidationError({"images": f"A review can contain at most {self.max_images} images."})
+        prepared = []
+        for upload in uploads:
+            image_serializer = GameReviewImageSerializer(data={"image": upload}, context={"request": request})
+            image_serializer.is_valid(raise_exception=True)
+            prepared.append(image_serializer)
+
+        with transaction.atomic():
+            saved_review = serializer.save(user=request.user, game=item.game)
+            if image_changes:
+                saved_review.images.exclude(pk__in=keep_ids).delete()
+                kept = list(saved_review.images.filter(pk__in=keep_ids).order_by("position", "created_at", "pk"))
+                for position, image in enumerate(kept):
+                    if image.position != position:
+                        image.position = position
+                        image.save(update_fields=("position", "updated_at"))
+                for position, image_serializer in enumerate(prepared, start=len(kept)):
+                    image_serializer.save(review=saved_review, position=position)
+
+        saved_review = GameReview.objects.prefetch_related("images").get(pk=saved_review.pk)
+        response = GameReviewSerializer(saved_review, context={"request": request})
+        return Response(response.data, status=status.HTTP_200_OK if review else status.HTTP_201_CREATED)
 
     def delete(self, request, game_id: int):
         item = get_owned_library_item(request.user, game_id)
-        review = get_object_or_404(
-            GameReview,
-            user=request.user,
-            game=item.game,
-        )
+        review = get_object_or_404(GameReview, user=request.user, game=item.game)
         review.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
