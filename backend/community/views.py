@@ -1,9 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.db import transaction
-from django.db.models import Count, Exists, OuterRef, Q
+from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.exceptions import PermissionDenied
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
@@ -17,7 +18,6 @@ from community.models import (
 )
 from community.serializers import (
     CommunityPostSerializer,
-    GameReviewImageSerializer,
     GameReviewSerializer,
     OwnedGameSerializer,
     OwnedLibraryItemSerializer,
@@ -26,6 +26,11 @@ from community.serializers import (
     WishlistItemCreateSerializer,
     WishlistItemSerializer,
 )
+from community.review_services import (
+    DUPLICATE_REVIEW_MESSAGE,
+    save_review_from_request,
+)
+from games.models import Game
 from store.models import LibraryCollection, LibraryItem, Order
 from store.serializers import LibraryCollectionSerializer
 from store.views import get_library_queryset
@@ -321,10 +326,162 @@ class LibraryFeedView(APIView):
         return Response({"items": serialize_posts(posts[:50], request)})
 
 
+class ReviewPageNumberPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
+class GameReviewCollectionView(APIView):
+    """List public game reviews and let confirmed owners publish one review."""
+
+    http_method_names = ("get", "post", "head", "options")
+
+    def get_permissions(self):
+        classes = (IsAuthenticated,) if self.request.method == "POST" else (AllowAny,)
+        return [permission() for permission in classes]
+
+    @staticmethod
+    def get_game(game_id: int) -> Game:
+        return get_object_or_404(Game, pk=game_id)
+
+    @staticmethod
+    def get_reviews(game: Game):
+        return (
+            GameReview.objects.filter(game=game)
+            .select_related("user")
+            .prefetch_related("images")
+            .order_by("-updated_at", "-pk")
+        )
+
+    def get(self, request, game_id: int):
+        game = self.get_game(game_id)
+        reviews = self.get_reviews(game)
+        aggregates = reviews.aggregate(
+            average_rating=Avg("rating"),
+            review_count=Count("pk"),
+        )
+        distribution = {str(rating): 0 for rating in range(1, 6)}
+        distribution_rows = (
+            reviews.order_by()
+            .values("rating")
+            .annotate(review_total=Count("pk"))
+        )
+        for row in distribution_rows:
+            distribution[str(row["rating"])] = row["review_total"]
+
+        paginator = ReviewPageNumberPagination()
+        page = paginator.paginate_queryset(reviews, request, view=self)
+        viewer_review = None
+        if request.user.is_authenticated:
+            viewer_review = reviews.filter(user=request.user).first()
+        average = aggregates["average_rating"]
+        context = {"request": request}
+        return Response(
+            {
+                "game_id": game.pk,
+                "average_rating": f"{average:.2f}" if average is not None else None,
+                "review_count": aggregates["review_count"],
+                "rating_distribution": distribution,
+                "viewer_review": (
+                    GameReviewSerializer(viewer_review, context=context).data
+                    if viewer_review
+                    else None
+                ),
+                "pagination": {
+                    "page": paginator.page.number,
+                    "page_size": paginator.get_page_size(request),
+                    "total_pages": paginator.page.paginator.num_pages,
+                    "next": paginator.get_next_link(),
+                    "previous": paginator.get_previous_link(),
+                },
+                "reviews": GameReviewSerializer(
+                    page,
+                    many=True,
+                    context=context,
+                ).data,
+            },
+        )
+
+    def post(self, request, game_id: int):
+        game = self.get_game(game_id)
+        get_owned_library_item(request.user, game.pk)
+        if GameReview.objects.filter(user=request.user, game=game).exists():
+            raise serializers.ValidationError({"detail": DUPLICATE_REVIEW_MESSAGE})
+        review, _created = save_review_from_request(
+            request=request,
+            game=game,
+            partial=False,
+        )
+        return Response(
+            GameReviewSerializer(review, context={"request": request}).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class GameReviewDetailView(APIView):
+    """Return one public review and protect all mutations by its author."""
+
+    http_method_names = ("get", "put", "patch", "delete", "head", "options")
+
+    def get_permissions(self):
+        classes = (
+            (AllowAny,)
+            if self.request.method in ("GET", "HEAD", "OPTIONS")
+            else (IsAuthenticated,)
+        )
+        return [permission() for permission in classes]
+
+    @staticmethod
+    def get_review(game_id: int, review_id: int) -> GameReview:
+        return get_object_or_404(
+            GameReview.objects.select_related("user", "game").prefetch_related("images"),
+            pk=review_id,
+            game_id=game_id,
+        )
+
+    @staticmethod
+    def ensure_owner(request, review: GameReview) -> None:
+        if review.user_id != request.user.pk:
+            raise PermissionDenied("You can only modify your own review.")
+
+    def get(self, request, game_id: int, review_id: int):
+        review = self.get_review(game_id, review_id)
+        return Response(
+            GameReviewSerializer(review, context={"request": request}).data,
+        )
+
+    def put(self, request, game_id: int, review_id: int):
+        return self._update(request, game_id, review_id, partial=False)
+
+    def patch(self, request, game_id: int, review_id: int):
+        return self._update(request, game_id, review_id, partial=True)
+
+    def _update(self, request, game_id: int, review_id: int, partial: bool):
+        review = self.get_review(game_id, review_id)
+        self.ensure_owner(request, review)
+        saved_review, _created = save_review_from_request(
+            request=request,
+            game=review.game,
+            review=review,
+            partial=partial,
+        )
+        return Response(
+            GameReviewSerializer(saved_review, context={"request": request}).data,
+        )
+
+    def delete(self, request, game_id: int, review_id: int):
+        review = self.get_review(game_id, review_id)
+        self.ensure_owner(request, review)
+        review.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
 class GameReviewView(APIView):
+    """Backward-compatible current-user review endpoint used by Library UI."""
+
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "put", "patch", "delete", "options")
-    max_images = 4
 
     def post(self, request, game_id: int):
         return self._save(request, game_id, partial=False)
@@ -335,52 +492,23 @@ class GameReviewView(APIView):
     def patch(self, request, game_id: int):
         return self._save(request, game_id, partial=True)
 
-    @staticmethod
-    def _keep_image_ids(request):
-        raw_values = request.data.getlist("keep_image_ids") if hasattr(request.data, "getlist") else request.data.get("keep_image_ids", [])
-        if not isinstance(raw_values, (list, tuple)):
-            raw_values = [raw_values] if raw_values not in (None, "") else []
-        try:
-            return list(dict.fromkeys(int(value) for value in raw_values))
-        except (TypeError, ValueError) as error:
-            raise serializers.ValidationError({"images": "Every kept review image must have a valid id."}) from error
-
     def _save(self, request, game_id: int, partial: bool):
         item = get_owned_library_item(request.user, game_id)
-        review = GameReview.objects.prefetch_related("images").filter(user=request.user, game=item.game).first()
-        serializer = GameReviewSerializer(review, data=request.data, partial=partial or review is not None, context={"request": request})
-        serializer.is_valid(raise_exception=True)
-        image_changes = "replace_images" in request.data or "images" in request.FILES
-        uploads = request.FILES.getlist("images")
-        keep_ids = self._keep_image_ids(request) if image_changes else []
-        if any(image_id <= 0 for image_id in keep_ids):
-            raise serializers.ValidationError({"images": "Every kept review image must have a valid id."})
-        existing_ids = set(review.images.values_list("pk", flat=True) if review else [])
-        if set(keep_ids) - existing_ids:
-            raise serializers.ValidationError({"images": "A kept image does not belong to this review."})
-        if len(keep_ids) + len(uploads) > self.max_images:
-            raise serializers.ValidationError({"images": f"A review can contain at most {self.max_images} images."})
-        prepared = []
-        for upload in uploads:
-            image_serializer = GameReviewImageSerializer(data={"image": upload}, context={"request": request})
-            image_serializer.is_valid(raise_exception=True)
-            prepared.append(image_serializer)
-
-        with transaction.atomic():
-            saved_review = serializer.save(user=request.user, game=item.game)
-            if image_changes:
-                saved_review.images.exclude(pk__in=keep_ids).delete()
-                kept = list(saved_review.images.filter(pk__in=keep_ids).order_by("position", "created_at", "pk"))
-                for position, image in enumerate(kept):
-                    if image.position != position:
-                        image.position = position
-                        image.save(update_fields=("position", "updated_at"))
-                for position, image_serializer in enumerate(prepared, start=len(kept)):
-                    image_serializer.save(review=saved_review, position=position)
-
-        saved_review = GameReview.objects.prefetch_related("images").get(pk=saved_review.pk)
-        response = GameReviewSerializer(saved_review, context={"request": request})
-        return Response(response.data, status=status.HTTP_200_OK if review else status.HTTP_201_CREATED)
+        review = (
+            GameReview.objects.prefetch_related("images")
+            .filter(user=request.user, game=item.game)
+            .first()
+        )
+        saved_review, created = save_review_from_request(
+            request=request,
+            game=item.game,
+            review=review,
+            partial=partial or review is not None,
+        )
+        return Response(
+            GameReviewSerializer(saved_review, context={"request": request}).data,
+            status=status.HTTP_201_CREATED if created else status.HTTP_200_OK,
+        )
 
     def delete(self, request, game_id: int):
         item = get_owned_library_item(request.user, game_id)

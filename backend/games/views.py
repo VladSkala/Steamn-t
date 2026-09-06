@@ -1,4 +1,4 @@
-from django.db.models import BooleanField, Exists, OuterRef, Value
+from django.db.models import Avg, BooleanField, Count, Exists, OuterRef, Value
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.permissions import AllowAny
@@ -51,7 +51,14 @@ class GameListView(OwnershipQuerysetMixin, ListAPIView):
 class GameDetailView(OwnershipQuerysetMixin, RetrieveAPIView):
     """Return the complete public representation of one game."""
 
-    queryset = Game.objects.prefetch_related("genres", "screenshots").all()
+    queryset = (
+        Game.objects.annotate(
+            average_rating=Avg("reviews__rating"),
+            review_count=Count("reviews", distinct=True),
+        )
+        .prefetch_related("genres", "screenshots")
+        .all()
+    )
     serializer_class = GameDetailSerializer
     permission_classes = (AllowAny,)
     http_method_names = ("get", "head", "options")

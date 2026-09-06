@@ -122,6 +122,16 @@ class GameReview(TimeStampedModel):
                 fields=["user", "game"],
                 name="unique_game_review_per_user",
             ),
+            models.CheckConstraint(
+                condition=Q(rating__gte=1, rating__lte=5),
+                name="review_rating_between_1_and_5",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["game", "-updated_at", "-id"],
+                name="review_game_updated_idx",
+            ),
         ]
 
 

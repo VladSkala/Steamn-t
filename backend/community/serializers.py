@@ -224,13 +224,45 @@ class GameReviewImageSerializer(serializers.ModelSerializer):
 
 
 class GameReviewSerializer(serializers.ModelSerializer):
+    game_id = serializers.IntegerField(read_only=True)
     author = UserSummarySerializer(source="user", read_only=True)
     images = GameReviewImageSerializer(many=True, read_only=True)
+    is_owner = serializers.SerializerMethodField()
 
     class Meta:
         model = GameReview
-        fields = ("id", "author", "rating", "body", "images", "created_at", "updated_at")
-        read_only_fields = ("id", "author", "created_at", "updated_at")
+        fields = (
+            "id",
+            "game_id",
+            "author",
+            "rating",
+            "body",
+            "images",
+            "is_owner",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = (
+            "id",
+            "game_id",
+            "author",
+            "images",
+            "is_owner",
+            "created_at",
+            "updated_at",
+        )
+        extra_kwargs = {
+            "rating": {"required": True},
+            "body": {"required": True},
+        }
+
+    def get_is_owner(self, review: GameReview) -> bool:
+        request = self.context.get("request")
+        return bool(
+            request
+            and request.user.is_authenticated
+            and request.user.pk == review.user_id
+        )
 
     def validate_body(self, value: str) -> str:
         body = value.strip()

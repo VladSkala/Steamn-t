@@ -342,9 +342,13 @@ class GameDetailAPITests(APITestCase):
                 "hero_image_url",
                 "screenshots",
                 "genres",
+                "average_rating",
+                "review_count",
                 "is_owned",
             },
         )
+        self.assertIsNone(response.data["average_rating"])
+        self.assertEqual(response.data["review_count"], 0)
         self.assertFalse(response.data["is_owned"])
 
     def test_game_detail_returns_full_values_and_nested_genres(self):
