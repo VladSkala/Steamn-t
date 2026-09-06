@@ -5,6 +5,7 @@ import GameImage from "../components/GameImage";
 import MediaGallery from "../components/MediaGallery";
 import CatalogFeedback from "../components/CatalogFeedback";
 import WishlistToggleButton from "../components/WishlistToggleButton";
+import ReviewsSection from "../components/ReviewsSection";
 import useGameDetails from "../hooks/useGameDetails";
 import { useAuth } from "../hooks/useAuth";
 import { useCart } from "../hooks/useCart";
@@ -357,6 +358,7 @@ function LoadedGame({ game, onRetry }) {
           </div>
         </aside>
       </div>
+      <ReviewsSection gameId={game.id} isOwned={isOwned} />
     </div>
   );
 }
