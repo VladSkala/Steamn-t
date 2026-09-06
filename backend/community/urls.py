@@ -1,6 +1,8 @@
 from django.urls import path
 
 from community.views import (
+    GameReviewCollectionView,
+    GameReviewDetailView,
     GameReviewView,
     GameWishlistToggleView,
     LibraryFeedView,
@@ -17,6 +19,16 @@ from community.views import (
 app_name = "community"
 
 urlpatterns = [
+    path(
+        "games/<int:game_id>/reviews/",
+        GameReviewCollectionView.as_view(),
+        name="game-review-list",
+    ),
+    path(
+        "games/<int:game_id>/reviews/<int:review_id>/",
+        GameReviewDetailView.as_view(),
+        name="game-review-detail",
+    ),
     path("wishlist/", WishlistListView.as_view(), name="wishlist"),
     path(
         "wishlist/items/",

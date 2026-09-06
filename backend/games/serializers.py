@@ -60,6 +60,13 @@ class GameDetailSerializer(GameListSerializer):
     """Stable public detail contract used by the existing store page."""
 
     screenshots = GameScreenshotSerializer(many=True, read_only=True)
+    average_rating = serializers.DecimalField(
+        max_digits=3,
+        decimal_places=2,
+        read_only=True,
+        allow_null=True,
+    )
+    review_count = serializers.IntegerField(read_only=True, default=0)
 
     class Meta(GameListSerializer.Meta):
         fields = (
@@ -74,6 +81,8 @@ class GameDetailSerializer(GameListSerializer):
             "hero_image_url",
             "screenshots",
             "genres",
+            "average_rating",
+            "review_count",
             "is_owned",
         )
         read_only_fields = fields
