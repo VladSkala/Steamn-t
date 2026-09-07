@@ -1,9 +1,10 @@
 from django.db.models import Avg, BooleanField, Count, Exists, OuterRef, Value
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 
-from games.filters import GenreFilterBackend
+from games.filters import GenreFilterBackend, PriceRangeFilterBackend
 from games.models import Game, Genre
 from games.serializers import (
     GameDetailSerializer,
@@ -34,15 +35,28 @@ class OwnershipQuerysetMixin:
         return queryset.annotate(is_owned=Exists(owned_games))
 
 
+class GamePageNumberPagination(PageNumberPagination):
+    """Bounded page-number pagination for the public game catalog."""
+
+    page_size = 12
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
 class GameListView(OwnershipQuerysetMixin, ListAPIView):
     """Return the searchable, filterable public game catalog."""
 
     queryset = Game.objects.prefetch_related("genres").all()
     serializer_class = GameListSerializer
     permission_classes = (AllowAny,)
-    pagination_class = None
+    pagination_class = GamePageNumberPagination
     http_method_names = ("get", "head", "options")
-    filter_backends = (GenreFilterBackend, SearchFilter, OrderingFilter)
+    filter_backends = (
+        GenreFilterBackend,
+        PriceRangeFilterBackend,
+        SearchFilter,
+        OrderingFilter,
+    )
     search_fields = ("title",)
     ordering_fields = ("price", "title")
     ordering = ("title", "pk")

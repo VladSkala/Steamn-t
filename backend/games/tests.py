@@ -79,13 +79,18 @@ class CatalogAPITests(APITestCase):
         response = self.client.get(reverse("games:game-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertIsInstance(response.data, list)
+        self.assertIsInstance(response.data, dict)
         self.assertEqual(
-            [game["title"] for game in response.data],
+            set(response.data),
+            {"count", "next", "previous", "results"},
+        )
+        self.assertEqual(response.data["count"], 2)
+        self.assertEqual(
+            [game["title"] for game in response.data["results"]],
             ["Alpha Quest", "Beta Racer"],
         )
 
-        first_game = response.data[0]
+        first_game = response.data["results"][0]
         self.assertEqual(
             set(first_game),
             {
@@ -114,7 +119,9 @@ class CatalogAPITests(APITestCase):
         response = self.client.get(reverse("games:game-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        games_by_title = {game["title"]: game for game in response.data}
+        games_by_title = {
+            game["title"]: game for game in response.data["results"]
+        }
         self.assertEqual(
             games_by_title["Alpha Quest"]["cover"],
             "http://testserver/media/games/covers/2026/08/alpha-quest.webp",
@@ -144,11 +151,11 @@ class CatalogAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_405_METHOD_NOT_ALLOWED)
 
     def test_game_list_prefetches_genres(self):
-        with self.assertNumQueries(2):
+        with self.assertNumQueries(3):
             response = self.client.get(reverse("games:game-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        self.assertEqual(len(response.data["results"]), 2)
 
 
 class CatalogFilteringAPITests(APITestCase):
@@ -198,7 +205,7 @@ class CatalogFilteringAPITests(APITestCase):
 
     @staticmethod
     def response_titles(response):
-        return [game["title"] for game in response.data]
+        return [game["title"] for game in response.data["results"]]
 
     def test_search_matches_title_case_insensitively_and_only_searches_title(self):
         response = self.client.get(self.url, {"search": "qUeSt"})
@@ -212,7 +219,7 @@ class CatalogFilteringAPITests(APITestCase):
         developer_only_response = self.client.get(self.url, {"search": "Studio"})
 
         self.assertEqual(developer_only_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(developer_only_response.data, [])
+        self.assertEqual(developer_only_response.data["results"], [])
 
     def test_game_list_filters_by_genre_id(self):
         response = self.client.get(self.url, {"genre": self.rpg.id})
@@ -237,7 +244,7 @@ class CatalogFilteringAPITests(APITestCase):
         response = self.client.get(self.url, {"genre": 9_999_999})
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(response.data, [])
+        self.assertEqual(response.data["results"], [])
 
     def test_game_list_orders_by_price_in_both_directions(self):
         expectations = {

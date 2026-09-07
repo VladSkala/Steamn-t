@@ -54,7 +54,9 @@ class GameOwnershipAPITests(APITestCase):
         response = self.client.get(reverse("games:game-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertTrue(all(game["is_owned"] is False for game in response.data))
+        self.assertTrue(
+            all(game["is_owned"] is False for game in response.data["results"]),
+        )
 
     def test_authenticated_catalog_marks_only_the_users_owned_game(self):
         self.client.force_authenticate(user=self.owner)
@@ -62,7 +64,7 @@ class GameOwnershipAPITests(APITestCase):
         response = self.client.get(reverse("games:game-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        games = {game["id"]: game for game in response.data}
+        games = {game["id"]: game for game in response.data["results"]}
         self.assertTrue(games[self.owned_game.pk]["is_owned"])
         self.assertFalse(games[self.unowned_game.pk]["is_owned"])
 

@@ -96,8 +96,9 @@ class CoreMVPJourneyAPITests(APITestCase):
             },
         )
         self.assertEqual(catalog_response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(catalog_response.data), 1)
-        self.assertEqual(catalog_response.data[0]["id"], self.game.pk)
+        self.assertEqual(catalog_response.data["count"], 1)
+        self.assertEqual(len(catalog_response.data["results"]), 1)
+        self.assertEqual(catalog_response.data["results"][0]["id"], self.game.pk)
 
         wishlist_add_response = self.client.post(
             self.wishlist_items_url,
