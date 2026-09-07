@@ -14,6 +14,9 @@ from games.serializers import (
 from store.models import LibraryItem, Order
 
 
+FEATURED_GAME_LIMIT = 6
+
+
 class OwnershipQuerysetMixin:
     """Annotate catalog games with ownership without per-row queries."""
 
@@ -60,6 +63,20 @@ class GameListView(OwnershipQuerysetMixin, ListAPIView):
     search_fields = ("title",)
     ordering_fields = ("price", "title")
     ordering = ("title", "pk")
+
+
+class FeaturedGameListView(OwnershipQuerysetMixin, ListAPIView):
+    """Return a small deterministic selection chosen in Django Admin."""
+
+    queryset = Game.objects.prefetch_related("genres").filter(is_featured=True)
+    serializer_class = GameListSerializer
+    permission_classes = (AllowAny,)
+    pagination_class = None
+    http_method_names = ("get", "head", "options")
+    max_results = FEATURED_GAME_LIMIT
+
+    def get_queryset(self):
+        return super().get_queryset().order_by("title", "pk")[:self.max_results]
 
 
 class GameDetailView(OwnershipQuerysetMixin, RetrieveAPIView):

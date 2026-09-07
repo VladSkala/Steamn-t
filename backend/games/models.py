@@ -31,6 +31,11 @@ class Game(TimeStampedModel):
         decimal_places=2,
         validators=[MinValueValidator(Decimal("0.00"))],
     )
+    is_featured = models.BooleanField(
+        default=False,
+        db_index=True,
+        help_text="Show this game in the limited featured games selection.",
+    )
     cover = models.ImageField(
         upload_to="games/covers/%Y/%m/",
         blank=True,
