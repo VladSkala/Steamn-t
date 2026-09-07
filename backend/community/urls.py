@@ -8,6 +8,7 @@ from community.views import (
     LibraryFeedView,
     LibraryGameView,
     LibraryHomeContentView,
+    MyReviewListView,
     PostCommentListCreateView,
     PostReactionToggleView,
     WishlistItemCreateView,
@@ -19,6 +20,7 @@ from community.views import (
 app_name = "community"
 
 urlpatterns = [
+    path("reviews/my/", MyReviewListView.as_view(), name="my-reviews"),
     path(
         "games/<int:game_id>/reviews/",
         GameReviewCollectionView.as_view(),

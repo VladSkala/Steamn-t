@@ -637,30 +637,25 @@ function ReviewsSection({ gameId, isOwned }) {
             </div>
           </div>
         ) : composerOpen || editingReview ? (
-          <div>
-            {!composerOpen && !editingReview && (
-              <button
-                type="button"
-                className="reviews-button reviews-button-primary reviews-open-composer"
-                onClick={() => setComposerOpen(true)}
-              >
-                Write a review
-              </button>
-            )}
-            {(composerOpen || editingReview) && (
-              <ReviewComposer
-                key={viewerReview?.updated_at || "new-review"}
-                gameId={gameId}
-                viewerReview={editingReview ? viewerReview : null}
-                onSaved={handleSaved}
-                onCancel={() => {
-                  setComposerOpen(false);
-                  setEditingReview(false);
-                }}
-              />
-            )}
-          </div>
-        ) : null}
+          <ReviewComposer
+            key={viewerReview?.updated_at || "new-review"}
+            gameId={gameId}
+            viewerReview={editingReview ? viewerReview : null}
+            onSaved={handleSaved}
+            onCancel={() => {
+              setComposerOpen(false);
+              setEditingReview(false);
+            }}
+          />
+        ) : (
+          <button
+            type="button"
+            className="reviews-button reviews-button-primary reviews-open-composer"
+            onClick={() => setComposerOpen(true)}
+          >
+            Write a review
+          </button>
+        )}
       </div>
 
       {loading ? (
