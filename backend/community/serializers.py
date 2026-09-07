@@ -269,3 +269,41 @@ class GameReviewSerializer(serializers.ModelSerializer):
         if not body:
             raise serializers.ValidationError("Review cannot be empty.")
         return body
+
+
+class MyReviewGameSerializer(serializers.ModelSerializer):
+    """Compact game identity needed by the future My Reviews page."""
+
+    cover = serializers.SerializerMethodField()
+
+    class Meta:
+        model = Game
+        fields = ("id", "title", "cover", "developer")
+        read_only_fields = fields
+
+    def get_cover(self, game: Game) -> str | None:
+        if not game.cover:
+            return None
+        url = game.cover.url
+        request = self.context.get("request")
+        return request.build_absolute_uri(url) if request else url
+
+
+class MyReviewSerializer(serializers.ModelSerializer):
+    """Private review row returned only to its authenticated author."""
+
+    game = MyReviewGameSerializer(read_only=True)
+    images = GameReviewImageSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = GameReview
+        fields = (
+            "id",
+            "game",
+            "rating",
+            "body",
+            "images",
+            "created_at",
+            "updated_at",
+        )
+        read_only_fields = fields

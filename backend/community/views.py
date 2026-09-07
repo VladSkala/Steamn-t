@@ -3,6 +3,7 @@ from django.db.models import Avg, Count, Exists, OuterRef, Q
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import PermissionDenied
+from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
@@ -19,6 +20,7 @@ from community.models import (
 from community.serializers import (
     CommunityPostSerializer,
     GameReviewSerializer,
+    MyReviewSerializer,
     OwnedGameSerializer,
     OwnedLibraryItemSerializer,
     PostCommentSerializer,
@@ -330,6 +332,23 @@ class ReviewPageNumberPagination(PageNumberPagination):
     page_size = 10
     page_size_query_param = "page_size"
     max_page_size = 50
+
+
+class MyReviewListView(ListAPIView):
+    """Return only the authenticated user's reviews, newest update first."""
+
+    serializer_class = MyReviewSerializer
+    permission_classes = (IsAuthenticated,)
+    pagination_class = ReviewPageNumberPagination
+    http_method_names = ("get", "head", "options")
+
+    def get_queryset(self):
+        return (
+            GameReview.objects.filter(user=self.request.user)
+            .select_related("game")
+            .prefetch_related("images")
+            .order_by("-updated_at", "-pk")
+        )
 
 
 class GameReviewCollectionView(APIView):

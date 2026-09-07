@@ -12,3 +12,35 @@ Collection query parameters are `page` and `page_size`; the default is 10 and ma
 `GET /api/games/{game_id}/` now also includes two-decimal `average_rating` (or `null`) and integer `review_count`.
 
 The existing `/api/library/games/{game_id}/review/` endpoint remains available to the current Library UI and uses the shared validation and image lifecycle.
+
+## My Reviews
+
+`GET /api/reviews/my/` requires authentication and returns only reviews authored by the current user. Passing another user's id in query parameters does not change the owner scope.
+
+The endpoint uses standard DRF page-number pagination:
+
+```json
+{
+  "count": 1,
+  "next": null,
+  "previous": null,
+  "results": [
+    {
+      "id": 42,
+      "game": {
+        "id": 7,
+        "title": "Example Game",
+        "cover": "http://localhost:8000/media/games/covers/example.webp",
+        "developer": "Example Studio"
+      },
+      "rating": 5,
+      "body": "A useful review.",
+      "images": [],
+      "created_at": "2026-09-07T12:00:00Z",
+      "updated_at": "2026-09-07T12:00:00Z"
+    }
+  ]
+}
+```
+
+Query parameters are `page` and `page_size`. The default page size is 10 and the maximum is 50. Reviews are ordered by most recently updated first. This endpoint is read-only; editing and deleting continue to use the owner-protected game review detail endpoint.

@@ -132,6 +132,10 @@ class GameReview(TimeStampedModel):
                 fields=["game", "-updated_at", "-id"],
                 name="review_game_updated_idx",
             ),
+            models.Index(
+                fields=["user", "-updated_at", "-id"],
+                name="review_user_updated_idx",
+            ),
         ]
 
 
