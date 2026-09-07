@@ -6,21 +6,91 @@ const normalizeCollection = (data, resourceName) => {
   throw new TypeError(`Invalid ${resourceName} response: expected a list`);
 };
 
-const buildGameParams = ({ search = "", genre = "", ordering = "" } = {}) => {
-  const params = {};
-  const normalizedSearch = search.trim();
+const normalizeGamePage = (data) => {
+  if (Array.isArray(data)) {
+    return {
+      results: data,
+      count: data.length,
+      next: null,
+      previous: null,
+    };
+  }
+
+  if (!Array.isArray(data?.results)) {
+    throw new TypeError("Invalid games response: expected paginated results");
+  }
+
+  if (!Number.isInteger(data.count) || data.count < 0) {
+    throw new TypeError(
+      "Invalid games response: expected a non-negative count",
+    );
+  }
+
+  for (const key of ["next", "previous"]) {
+    if (data[key] !== null && typeof data[key] !== "string") {
+      throw new TypeError(`Invalid games response: expected ${key} link`);
+    }
+  }
+
+  return {
+    results: data.results,
+    count: data.count,
+    next: data.next,
+    previous: data.previous,
+  };
+};
+
+const buildGameParams = ({
+  search = "",
+  genre = "",
+  ordering = "",
+  page = 1,
+  pageSize = 12,
+  minPrice = "",
+  maxPrice = "",
+} = {}) => {
+  const params = {
+    page,
+    page_size: pageSize,
+  };
+  const normalizedSearch = String(search).trim();
+  const normalizedGenre = String(genre).trim();
+  const normalizedMinPrice = String(minPrice).trim();
+  const normalizedMaxPrice = String(maxPrice).trim();
+
   if (normalizedSearch) params.search = normalizedSearch;
-  if (genre && genre !== "all") params.genre = genre;
+  if (normalizedGenre && normalizedGenre !== "all") {
+    params.genre = normalizedGenre;
+  }
   if (ordering) params.ordering = ordering;
+  if (normalizedMinPrice) params.min_price = normalizedMinPrice;
+  if (normalizedMaxPrice) params.max_price = normalizedMaxPrice;
   return params;
 };
 
-export const getGames = async ({ signal, search, genre, ordering } = {}) => {
+export const getGames = async ({
+  signal,
+  search,
+  genre,
+  ordering,
+  page,
+  pageSize,
+  minPrice,
+  maxPrice,
+} = {}) => {
   const { data } = await api.get("/games/", {
     signal,
-    params: buildGameParams({ search, genre, ordering }),
+    params: buildGameParams({
+      search,
+      genre,
+      ordering,
+      page,
+      pageSize,
+      minPrice,
+      maxPrice,
+    }),
   });
-  return normalizeCollection(data, "games");
+  return normalizeGamePage(data);
 };
 
 export const getGenres = async ({ signal } = {}) => {
