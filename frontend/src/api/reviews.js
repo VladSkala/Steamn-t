@@ -9,7 +9,9 @@ const ensureObject = (value, name) => {
 
 const ensureArray = (value, name) => {
   if (!Array.isArray(value)) {
-    throw new TypeError(`Invalid reviews response: expected ${name} to be a list`);
+    throw new TypeError(
+      `Invalid reviews response: expected ${name} to be a list`,
+    );
   }
   return value;
 };
@@ -27,6 +29,34 @@ export const getGameReviews = async (
   ensureObject(data.pagination, "pagination");
   ensureObject(data.rating_distribution, "rating_distribution");
   ensureArray(data.reviews, "reviews");
+
+  return data;
+};
+
+export const getMyReviews = async ({
+  page = 1,
+  pageSize = 10,
+  signal,
+} = {}) => {
+  const { data } = await api.get("/reviews/my/", {
+    signal,
+    params: { page, page_size: pageSize },
+  });
+
+  ensureObject(data, "a My Reviews payload");
+  ensureArray(data.results, "results");
+  if (!Number.isInteger(data.count) || data.count < 0) {
+    throw new TypeError(
+      "Invalid reviews response: expected a non-negative count",
+    );
+  }
+  for (const field of ["next", "previous"]) {
+    if (data[field] !== null && typeof data[field] !== "string") {
+      throw new TypeError(
+        `Invalid reviews response: expected ${field} to be a URL or null`,
+      );
+    }
+  }
 
   return data;
 };

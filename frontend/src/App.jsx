@@ -12,6 +12,7 @@ import LibraryFeedPage from "./pages/LibraryFeedPage";
 import LibraryGamePage from "./pages/LibraryGamePage";
 import LibraryPage from "./pages/LibraryPage";
 import LoginPage from "./pages/LoginPage";
+import MyReviewsPage from "./pages/MyReviewsPage";
 import NotFoundPage from "./pages/NotFoundPage";
 import ProfilePage from "./pages/ProfilePage";
 import RegisterPage from "./pages/RegisterPage";
@@ -39,6 +40,10 @@ function App() {
         />
         <Route path="games/:gameId" element={<GameDetailsPage />} />
         <Route path="profile" element={protectedPage(<ProfilePage />)} />
+        <Route
+          path="profile/reviews"
+          element={protectedPage(<MyReviewsPage />)}
+        />
         <Route path="settings" element={protectedPage(<SettingsPage />)} />
         <Route path="wishlist" element={protectedPage(<WishlistPage />)} />
         <Route path="404" element={<NotFoundPage />} />

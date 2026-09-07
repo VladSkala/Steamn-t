@@ -894,6 +894,9 @@ function ProfilePage() {
               <h2>
                 Reviews <span>{formatNumber(stats.reviews)}</span>
               </h2>
+              <Link className="profile-wishlist-link" to="/profile/reviews">
+                Manage reviews <span aria-hidden="true">→</span>
+              </Link>
             </div>
             {reviews.loading ? (
               <div className="profile-inline-state">Loading reviews…</div>
