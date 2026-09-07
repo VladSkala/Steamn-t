@@ -1,29 +1,28 @@
 const icons = {
-  empty: '⌕',
-  error: '!',
-}
+  empty: "⌕",
+  error: "!",
+};
 
 function CatalogFeedback({
   kind,
   title,
   message,
   onRetry,
-  className = '',
+  actionLabel = "Try again",
+  className = "",
 }) {
-  const classes = [
-    'catalog-feedback',
-    `catalog-feedback-${kind}`,
-    className,
-  ].filter(Boolean).join(' ')
+  const classes = ["catalog-feedback", `catalog-feedback-${kind}`, className]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <div
       className={classes}
-      role={kind === 'error' ? 'alert' : 'status'}
-      aria-live={kind === 'error' ? 'assertive' : 'polite'}
-      aria-busy={kind === 'loading'}
+      role={kind === "error" ? "alert" : "status"}
+      aria-live={kind === "error" ? "assertive" : "polite"}
+      aria-busy={kind === "loading"}
     >
-      {kind === 'loading' ? (
+      {kind === "loading" ? (
         <span className="catalog-feedback-spinner" aria-hidden="true" />
       ) : (
         <span className="catalog-feedback-icon" aria-hidden="true">
@@ -40,11 +39,11 @@ function CatalogFeedback({
           className="catalog-feedback-button"
           onClick={onRetry}
         >
-          Try again
+          {actionLabel}
         </button>
       )}
     </div>
-  )
+  );
 }
 
-export default CatalogFeedback
+export default CatalogFeedback;
