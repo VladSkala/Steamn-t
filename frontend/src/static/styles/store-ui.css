@@ -503,28 +503,76 @@ a {
 }
 .store-featured-arrows {
   position: absolute;
-  right: 28px;
-  bottom: 28px;
+  top: 50%;
+  right: 22px;
+  bottom: auto;
+  left: 22px;
   display: flex;
   align-items: center;
-  gap: 12px;
-  color: #e2e5f8;
-  font-size: 12px;
+  justify-content: space-between;
+  gap: 0;
+  transform: translateY(-50%);
+  pointer-events: none;
+  z-index: 7;
 }
+
+.store-featured-arrows span {
+  display: none;
+}
+
 .store-featured-arrows button {
+  pointer-events: auto;
   display: grid;
   place-items: center;
-  width: 36px;
+  flex: 0 0 28px;
+  width: 28px;
   height: 36px;
+  margin: 0;
   padding: 0;
-  border: 1px solid #828cb355;
-  border-radius: 50%;
-  background: #0a1127bb;
-  color: #fff;
-  font-size: 18px;
+  border: 0;
+  outline: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  color: #9b7cff;
+  font-size: 0;
+  font-weight: 400;
+  line-height: 1;
+  cursor: pointer;
+  appearance: none;
+  transition:
+    color 160ms ease,
+    transform 160ms ease,
+    text-shadow 160ms ease;
+}
+.store-featured-arrows button::before {
+  display: block;
+  font-family: Arial, sans-serif;
+  font-size: 38px;
+  font-weight: 300;
+  line-height: 1;
+}
+.store-featured-arrows button:first-child::before {
+  content: "‹";
+}
+.store-featured-arrows button:last-child::before {
+  content: "›";
 }
 .store-featured-arrows button:hover {
-  background: #394164;
+  color: #b59aff;
+  background: transparent;
+  transform: scale(1.08);
+  text-shadow: 0 0 12px rgba(139, 92, 246, 0.45);
+}
+.store-featured-arrows button:focus-visible {
+  outline: 0;
+  color: #b59aff;
+  background: transparent;
+  text-shadow: 0 0 12px rgba(139, 92, 246, 0.45);
+}
+.store-featured-arrows button:active {
+  background: transparent;
+  transform: scale(0.98);
 }
 .store-featured-thumbs {
   display: grid;
@@ -1255,9 +1303,16 @@ a {
     font-size: 13px;
     margin-bottom: 18px;
   }
+  .store-featured-copy {
+    padding-left: 72px;
+    padding-right: 72px;
+  }
   .store-featured-arrows {
-    bottom: 20px;
-    right: 20px;
+    top: 50%;
+    right: 14px;
+    bottom: auto;
+    left: 14px;
+    transform: translateY(-50%);
   }
   .store-featured-shade {
     background: linear-gradient(
@@ -2484,5 +2539,108 @@ body {
 
   .catalog-pagination-ellipsis {
     width: 14px;
+  }
+}
+
+/* KAN-38: Featured navigation — transparent purple chevrons. */
+.store-featured-copy {
+  width: min(680px, 78%);
+  padding-left: 82px;
+  padding-right: 82px;
+}
+
+.store-featured-thumbs button {
+  grid-template-columns: 1fr;
+  padding: 0;
+  background: transparent;
+  border-radius: 7px;
+}
+.store-featured-thumbs .media-artwork {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 7;
+  border-radius: 7px;
+  opacity: 0.72;
+}
+.store-featured-thumbs button.active .media-artwork,
+.store-featured-thumbs button:hover .media-artwork {
+  opacity: 1;
+}
+.store-featured-thumbs button.active {
+  padding: 0;
+  border-color: #8992e5;
+  background: transparent;
+}
+.home-featured-feedback,
+.home-featured-empty {
+  min-height: clamp(330px, 31vw, 420px);
+  margin: 0 0 12px;
+}
+.home-featured-empty {
+  display: flex;
+  align-items: flex-end;
+  padding: 38px 42px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 80% 15%, rgba(137, 108, 255, 0.22), transparent 35%),
+    linear-gradient(135deg, #151a2f, #0d1220);
+}
+.home-featured-empty > div {
+  width: min(620px, 100%);
+}
+.home-featured-empty h1 {
+  margin: 10px 0 10px;
+  font-size: clamp(28px, 3.5vw, 44px);
+  line-height: 1.15;
+  letter-spacing: -0.04em;
+}
+.home-featured-empty p {
+  max-width: 520px;
+  margin: 0 0 22px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+}
+
+@media (max-width: 700px) {
+  .store-featured-slide {
+    min-height: 340px;
+    height: 70vw;
+    max-height: 420px;
+  }
+  .store-featured-copy {
+    width: 100%;
+    padding: 26px 62px;
+  }
+
+  .store-featured-arrows {
+    right: 10px;
+    left: 10px;
+  }
+
+  .store-featured-arrows button {
+    flex-basis: 24px;
+    width: 24px;
+    height: 32px;
+  }
+
+  .store-featured-arrows button::before {
+    font-size: 32px;
+  }
+  .store-featured-copy h1 {
+    font-size: clamp(24px, 8vw, 34px);
+  }
+  .store-featured-copy > p {
+    -webkit-line-clamp: 3;
+    font-size: 13px;
+  }
+  .store-featured-thumbs {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+  .home-featured-empty {
+    min-height: 340px;
+    padding: 28px;
   }
 }

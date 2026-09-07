@@ -5,6 +5,7 @@ import CatalogFeedback from "../components/CatalogFeedback";
 import GameCard from "../components/GameCard";
 import GameImage from "../components/GameImage";
 import useCatalogData from "../hooks/useCatalogData";
+import useFeaturedGames from "../hooks/useFeaturedGames";
 
 const money = (price) =>
   Number(price) === 0
@@ -16,6 +17,8 @@ const money = (price) =>
 
 function FeaturedCarousel({ games }) {
   const [index, setIndex] = useState(0);
+
+  if (!games.length) return null;
   const active = index % games.length;
   const game = games[active];
   const select = (offset) =>
@@ -83,7 +86,6 @@ function FeaturedCarousel({ games }) {
               onClick={() => setIndex(itemIndex)}
             >
               <GameImage src={item.cover} alt="" />
-              <span>{item.title}</span>
             </button>
           ))}
         </div>
@@ -148,9 +150,12 @@ export default function HomePage() {
   const { games, genres, loading, error, retry } = useCatalogData({
     includeGenres: true,
   });
-  const featured = [...games]
-    .sort((a, b) => Number(Boolean(b.cover)) - Number(Boolean(a.cover)))
-    .slice(0, 6);
+  const {
+    games: featured,
+    loading: featuredLoading,
+    error: featuredError,
+    retry: retryFeatured,
+  } = useFeaturedGames();
   const recent = [...games].sort((a, b) =>
     String(b.release_date).localeCompare(String(a.release_date)),
   );
@@ -161,28 +166,60 @@ export default function HomePage() {
 
   return (
     <div className="store-home">
+      {featuredLoading ? (
+        <CatalogFeedback
+          kind="loading"
+          title="Loading featured games"
+          message="Picking the games selected for the home page."
+          className="home-featured-feedback"
+        />
+      ) : featuredError ? (
+        <CatalogFeedback
+          kind="error"
+          title="Featured games unavailable"
+          message={featuredError}
+          onRetry={retryFeatured}
+          className="home-featured-feedback"
+        />
+      ) : featured.length === 0 ? (
+        <div className="home-featured-empty">
+          <div>
+            <span className="store-eyebrow">Featured games</span>
+            <h1>Featured games are coming soon.</h1>
+            <p>Explore the catalog to discover something new.</p>
+            <Link className="primary-button" to="/catalog">
+              Explore catalog <span aria-hidden="true">→</span>
+            </Link>
+          </div>
+        </div>
+      ) : (
+        <FeaturedCarousel games={featured} />
+      )}
+
       {loading ? (
         <CatalogFeedback
           kind="loading"
-          title="Loading games"
-          message="Getting the store ready."
+          title="Loading catalog"
+          message="Getting the rest of the store ready."
+          className="home-catalog-feedback"
         />
       ) : error ? (
         <CatalogFeedback
           kind="error"
-          title="Store unavailable"
+          title="Catalog unavailable"
           message={error}
           onRetry={retry}
+          className="home-catalog-feedback"
         />
       ) : !games.length ? (
         <CatalogFeedback
           kind="empty"
-          title="The store is empty"
+          title="The catalog is empty"
           message="Games will appear here as they are added to the catalog."
+          className="home-catalog-feedback"
         />
       ) : (
         <>
-          <FeaturedCarousel games={featured} />
           <Shelf
             title="Discover something new"
             games={recent.slice(0, 3)}

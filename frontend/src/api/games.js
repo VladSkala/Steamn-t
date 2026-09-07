@@ -93,6 +93,11 @@ export const getGames = async ({
   return normalizeGamePage(data);
 };
 
+export const getFeaturedGames = async ({ signal } = {}) => {
+  const { data } = await api.get("/games/featured/", { signal });
+  return normalizeCollection(data, "featured games");
+};
+
 export const getGenres = async ({ signal } = {}) => {
   const { data } = await api.get("/genres/", { signal, skipAuth: true });
   return normalizeCollection(data, "genres");
