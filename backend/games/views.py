@@ -1,11 +1,19 @@
-from django.db.models import Avg, BooleanField, Count, Exists, OuterRef, Value
+from django.db.models import (
+    Avg,
+    BooleanField,
+    Count,
+    Exists,
+    OuterRef,
+    Prefetch,
+    Value,
+)
 from rest_framework.filters import OrderingFilter, SearchFilter
 from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny
 
 from games.filters import GenreFilterBackend, PriceRangeFilterBackend
-from games.models import Game, Genre
+from games.models import Game, GameScreenshot, Genre
 from games.serializers import (
     GameDetailSerializer,
     GameListSerializer,
@@ -87,7 +95,13 @@ class GameDetailView(OwnershipQuerysetMixin, RetrieveAPIView):
             average_rating=Avg("reviews__rating"),
             review_count=Count("reviews", distinct=True),
         )
-        .prefetch_related("genres", "screenshots")
+        .prefetch_related(
+            "genres",
+            Prefetch(
+                "screenshots",
+                queryset=GameScreenshot.objects.order_by("position", "pk"),
+            ),
+        )
         .all()
     )
     serializer_class = GameDetailSerializer

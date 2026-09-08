@@ -50,6 +50,20 @@ class GameListSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
 
 
 class GameScreenshotSerializer(serializers.ModelSerializer):
+    """Read-only screenshot data with an explicit media URL contract."""
+
+    image = serializers.SerializerMethodField()
+
+    def get_image(self, screenshot: GameScreenshot) -> str | None:
+        if not screenshot.image:
+            return None
+
+        image_url = screenshot.image.url
+        request = self.context.get("request")
+        if request is None:
+            return image_url
+        return request.build_absolute_uri(image_url)
+
     class Meta:
         model = GameScreenshot
         fields = ("id", "image", "caption", "position")
