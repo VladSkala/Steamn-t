@@ -7,6 +7,7 @@ class GameScreenshotInline(admin.TabularInline):
     model = GameScreenshot
     fields = ("image", "caption", "position")
     extra = 0
+    ordering = ("position", "pk")
 
 
 @admin.register(Game)
