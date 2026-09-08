@@ -1,0 +1,192 @@
+/* KAN-42: final responsive safeguards for the existing Steamn't UI. */
+
+/* Flex/grid descendants may otherwise expand a page when labels or titles are long. */
+:where(
+  .store-game,
+  .catalog-page,
+  .cart-page,
+  .checkout-page,
+  .library-page,
+  .wishlist-page,
+  .profile-page,
+  .my-reviews-page,
+  .settings-page,
+  .store-toolbar,
+  .catalog-layout,
+  .wishlist-layout,
+  .library-shell
+),
+:where(
+  .store-game,
+  .catalog-page,
+  .cart-page,
+  .checkout-page,
+  .library-page,
+  .wishlist-page,
+  .profile-page,
+  .my-reviews-page,
+  .settings-page,
+  .store-toolbar,
+  .catalog-layout,
+  .wishlist-layout,
+  .library-shell
+) > * {
+  min-inline-size: 0;
+}
+
+:where(
+  .store-page-title,
+  .library-page-header,
+  .profile-user-line,
+  .wishlist-item-heading,
+  .library-list-copy,
+  .my-review-heading,
+  .reviews-card-topline
+) {
+  min-inline-size: 0;
+}
+
+:where(
+  .store-page-title h1,
+  .library-page-header h1,
+  .profile-user-line h1,
+  .wishlist-item-heading h2,
+  .library-list-copy > a,
+  .my-review-title,
+  .reviews-card-body
+) {
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 760px) {
+  /* Sidebars become normal document sections before their content gets cramped. */
+  .catalog-layout,
+  .wishlist-layout,
+  .library-page .library-shell {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .catalog-filters,
+  .wishlist-filters,
+  .library-page .library-sidebar {
+    position: static;
+    max-height: none;
+  }
+
+  /* Pagination remains readable when its summary contains larger totals. */
+  .catalog-pagination-summary {
+    white-space: normal;
+    overflow-wrap: anywhere;
+    text-align: center;
+  }
+
+  /* Primary icon controls retain a reliable touch target on compact screens. */
+  .menu-toggle,
+  .view-mode-toggle,
+  .game-wishlist-button,
+  .wishlist-remove-button,
+  .store-gallery-expand,
+  .store-viewer-close,
+  .profile-modal-close,
+  .catalog-pagination-page,
+  .catalog-pagination-button {
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .header-menu {
+    max-height: calc(100dvh - 72px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .store-featured-arrows button {
+    flex-basis: 44px;
+    width: 44px;
+    height: 44px;
+  }
+}
+
+@media (max-width: 520px) {
+  /* A 390px reference viewport has room for one useful Wishlist card per row. */
+  .wishlist-games-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .wishlist-item.grid-view .wishlist-remove-button {
+    width: 44px;
+    height: 44px;
+  }
+
+  /* Dialogs use the dynamic viewport and keep every action reachable. */
+  .profile-modal-backdrop,
+  .library-dialog-backdrop,
+  .wishlist-confirm-backdrop {
+    padding:
+      max(8px, env(safe-area-inset-top))
+      max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-left));
+  }
+
+  .profile-modal,
+  .library-collection-dialog,
+  .wishlist-confirm-dialog {
+    width: 100%;
+    max-width: 100%;
+    max-height: calc(100dvh - 16px);
+  }
+
+  .profile-form-actions,
+  .library-dialog-actions,
+  .my-reviews-editor-actions,
+  .reviews-composer-actions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .profile-form-actions > *,
+  .library-dialog-actions > *,
+  .my-reviews-editor-actions > *,
+  .reviews-composer-actions > * {
+    width: 100%;
+    min-width: 0;
+    margin-inline: 0;
+  }
+
+  /* The native image viewer must not depend on legacy 32px desktop gutters. */
+  .store-image-viewer {
+    width: calc(100% - 16px);
+    max-height: calc(100dvh - 16px);
+    padding: 52px 8px 10px;
+  }
+
+  .store-image-viewer .media-artwork,
+  .store-image-viewer .media-artwork img {
+    max-height: calc(100dvh - 112px);
+  }
+
+  .store-featured-copy {
+    padding-inline: 58px;
+  }
+
+  .footer-links,
+  .footer-bottom {
+    white-space: normal;
+  }
+}
+
+@media (max-width: 380px) {
+  .store-featured-copy {
+    padding-inline: 52px;
+  }
+
+  .catalog-pagination {
+    gap: 8px;
+    padding-inline: 10px;
+  }
+
+  .catalog-pagination-pages {
+    gap: 2px;
+  }
+}
