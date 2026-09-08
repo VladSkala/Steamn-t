@@ -1,4 +1,5 @@
 from django.contrib import admin
+from django.db.models import Count
 
 from games.models import Game, GameScreenshot, Genre
 
@@ -24,6 +25,21 @@ class GameAdmin(admin.ModelAdmin):
     search_fields = ("title", "developer")
     filter_horizontal = ("genres",)
     inlines = (GameScreenshotInline,)
+    ordering = ("title", "pk")
+    list_per_page = 50
 
 
-admin.site.register(Genre)
+@admin.register(Genre)
+class GenreAdmin(admin.ModelAdmin):
+    list_display = ("name", "game_count")
+    search_fields = ("name",)
+    ordering = ("name",)
+
+    def get_queryset(self, request):
+        return super().get_queryset(request).annotate(
+            _game_count=Count("games", distinct=True),
+        )
+
+    @admin.display(description="Games", ordering="_game_count")
+    def game_count(self, obj):
+        return obj._game_count
