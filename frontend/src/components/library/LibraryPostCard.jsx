@@ -16,6 +16,15 @@ const formatDate = (value) => {
   return Number.isNaN(date.getTime()) ? 'Recently' : dateFormatter.format(date)
 }
 
+const getPostActionError = (requestError) => {
+  const detail = requestError?.response?.data?.detail
+  if (typeof detail === 'string' && detail.trim()) return detail
+  if (!requestError?.response) {
+    return 'The community service is unavailable. Check the backend and try again.'
+  }
+  return 'Your reaction could not be updated. Please try again.'
+}
+
 function AuthorAvatar({ author }) {
   const name = author?.username?.trim() || 'Steamnt player'
   return (
@@ -61,6 +70,7 @@ function LibraryPostCard({
   children,
 }) {
   const [likeBusy, setLikeBusy] = useState(false)
+  const [likeError, setLikeError] = useState('')
   const [shared, setShared] = useState(false)
   const authorName = post.author?.username?.trim() || 'Steamnt player'
   const hasMedia = Boolean(post.media)
@@ -68,8 +78,11 @@ function LibraryPostCard({
   const handleLike = async () => {
     if (!onLike || likeBusy) return
     setLikeBusy(true)
+    setLikeError('')
     try {
       await onLike(post)
+    } catch (requestError) {
+      setLikeError(getPostActionError(requestError))
     } finally {
       setLikeBusy(false)
     }
@@ -140,6 +153,7 @@ function LibraryPostCard({
           type="button"
           className={post.is_liked ? 'active' : ''}
           aria-pressed={post.is_liked}
+          aria-busy={likeBusy}
           onClick={handleLike}
           disabled={likeBusy}
         >
@@ -160,6 +174,15 @@ function LibraryPostCard({
           <span>{shared ? 'Copied' : 'Share'}</span>
         </button>
       </footer>
+
+      {likeError && (
+        <div className="library-post-action-error" role="alert">
+          <span>{likeError}</span>
+          <button type="button" onClick={handleLike} disabled={likeBusy}>
+            Try again
+          </button>
+        </div>
+      )}
 
       {children}
     </article>

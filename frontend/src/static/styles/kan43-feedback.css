@@ -1,0 +1,96 @@
+/* KAN-43: user-visible feedback for recoverable API actions. */
+
+.library-post-action-error,
+.library-game-action-error,
+.library-comments-load-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 11px 13px;
+  border: 1px solid rgba(248, 113, 113, 0.3);
+  border-radius: 10px;
+  background: rgba(127, 29, 29, 0.14);
+  color: #fecaca;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.library-post-action-error {
+  margin-top: 10px;
+}
+
+.library-game-action-error {
+  margin: 12px 0 0;
+}
+
+.library-comments-load-error {
+  margin: 4px 0 12px;
+}
+
+.library-post-action-error span,
+.library-game-action-error span,
+.library-comments-load-error span {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.library-post-action-error button,
+.library-game-action-error button,
+.library-comments-load-error button {
+  min-height: 36px;
+  flex: 0 0 auto;
+  padding: 0 12px;
+  border: 1px solid rgba(248, 113, 113, 0.38);
+  border-radius: 8px;
+  background: rgba(127, 29, 29, 0.2);
+  color: #fee2e2;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.library-post-action-error button:hover:not(:disabled),
+.library-game-action-error button:hover:not(:disabled),
+.library-comments-load-error button:hover:not(:disabled) {
+  border-color: rgba(254, 202, 202, 0.58);
+  background: rgba(153, 27, 27, 0.28);
+}
+
+.library-post-action-error button:focus-visible,
+.library-game-action-error button:focus-visible,
+.library-comments-load-error button:focus-visible {
+  outline: 2px solid #fca5a5;
+  outline-offset: 2px;
+}
+
+.library-post-action-error button:disabled,
+.library-game-action-error button:disabled,
+.library-comments-load-error button:disabled {
+  cursor: wait;
+  opacity: 0.58;
+}
+
+@media (max-width: 520px) {
+  .library-post-action-error,
+  .library-game-action-error,
+  .library-comments-load-error {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .library-post-action-error button,
+  .library-game-action-error button,
+  .library-comments-load-error button {
+    width: 100%;
+    min-height: 44px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .library-post-action-error button,
+  .library-game-action-error button,
+  .library-comments-load-error button {
+    transition: none;
+  }
+}

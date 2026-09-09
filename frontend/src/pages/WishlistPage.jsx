@@ -323,14 +323,18 @@ function WishlistPage() {
       </header>
 
       {isLoading && items.length === 0 ? (
-        <CatalogFeedback type="loading" message="Loading your Wishlist…" />
+        <CatalogFeedback
+          kind="loading"
+          title="Loading your Wishlist"
+          message="Fetching your saved games."
+        />
       ) : error && items.length === 0 ? (
         <CatalogFeedback
-          type="error"
+          kind="error"
           title="Wishlist unavailable"
           message={error}
           actionLabel="Try again"
-          onAction={retryWishlist}
+          onRetry={retryWishlist}
         />
       ) : items.length === 0 ? (
         <section className="wishlist-empty-state">
