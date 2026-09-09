@@ -70,6 +70,15 @@ function getReviewSaveError(requestError) {
   return "Unable to save your review.";
 }
 
+function getLibraryActionError(requestError, fallback) {
+  const detail = requestError?.response?.data?.detail;
+  if (typeof detail === "string" && detail.trim()) return detail;
+  if (!requestError?.response) {
+    return "The library service is unavailable. Check the backend and try again.";
+  }
+  return fallback;
+}
+
 function ReviewImageTile({ source, alt, onRemove, removeLabel }) {
   return (
     <figure className="library-review-image-tile">
@@ -333,6 +342,7 @@ function LibraryGamePage() {
   const { data, loading, error, retry, refresh, updatePost } =
     useLibraryGame(gameId);
   const [favoriteBusy, setFavoriteBusy] = useState(false);
+  const [favoriteError, setFavoriteError] = useState("");
 
   const likePost = async (post) => {
     updatePost(post.id, await togglePostReaction(post.id));
@@ -341,12 +351,20 @@ function LibraryGamePage() {
   const toggleFavorite = async () => {
     if (!data?.library_item || favoriteBusy) return;
     setFavoriteBusy(true);
+    setFavoriteError("");
     try {
       await updateLibraryItem(data.library_item.id, {
         is_favorite: !data.library_item.is_favorite,
       });
       refresh();
       sidebar.retry();
+    } catch (requestError) {
+      setFavoriteError(
+        getLibraryActionError(
+          requestError,
+          "Favorite status could not be updated. Please try again.",
+        ),
+      );
     } finally {
       setFavoriteBusy(false);
     }
@@ -473,6 +491,19 @@ function LibraryGamePage() {
           </button>
         </div>
       </section>
+
+      {favoriteError && (
+        <div className="library-game-action-error" role="alert">
+          <span>{favoriteError}</span>
+          <button
+            type="button"
+            onClick={toggleFavorite}
+            disabled={favoriteBusy}
+          >
+            Try again
+          </button>
+        </div>
+      )}
 
       <nav className="library-game-tabs" aria-label="Game page sections">
         <Link to={`/games/${game.id}`}>Store page</Link>

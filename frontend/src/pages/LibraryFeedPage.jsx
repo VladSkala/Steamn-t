@@ -30,7 +30,9 @@ const kinds = [
 function CommentThread({ post, onCreated }) {
   const [comments, setComments] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [loadError, setLoadError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const [reloadKey, setReloadKey] = useState(0);
   const [body, setBody] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
@@ -40,35 +42,48 @@ function CommentThread({ post, onCreated }) {
       .then((items) => {
         if (!controller.signal.aborted) {
           setComments(items);
+          setLoadError("");
           setLoading(false);
         }
       })
       .catch((requestError) => {
         if (controller.signal.aborted) return;
-        setError(
-          requestError.response?.data?.detail ||
-            "Comments could not be loaded.",
+        setLoadError(
+          requestError?.response?.data?.detail ||
+            (requestError?.response
+              ? "Comments could not be loaded."
+              : "The comments service is unavailable. Check the backend and try again."),
         );
         setLoading(false);
       });
     return () => controller.abort();
-  }, [post.id]);
+  }, [post.id, reloadKey]);
+
+  const retryComments = () => {
+    setComments([]);
+    setLoading(true);
+    setLoadError("");
+    setActionError("");
+    setReloadKey((value) => value + 1);
+  };
 
   const submit = async (event) => {
     event.preventDefault();
     if (!body.trim()) return;
     setSubmitting(true);
-    setError("");
+    setActionError("");
     try {
       const comment = await createPostComment(post.id, body.trim());
       setComments((current) => [...current, comment]);
       setBody("");
       onCreated();
     } catch (requestError) {
-      setError(
-        requestError.response?.data?.body?.[0] ||
-          requestError.response?.data?.detail ||
-          "Your comment could not be published.",
+      setActionError(
+        requestError?.response?.data?.body?.[0] ||
+          requestError?.response?.data?.detail ||
+          (requestError?.response
+            ? "Your comment could not be published."
+            : "The comments service is unavailable. Check the backend and try again."),
       );
     } finally {
       setSubmitting(false);
@@ -80,27 +95,41 @@ function CommentThread({ post, onCreated }) {
       className="library-comments"
       aria-label={`Comments on ${post.title}`}
     >
-      {loading && <p>Loading comments…</p>}
-      {!loading && !comments.length && <p>Be the first to comment.</p>}
-      {comments.map((comment) => (
-        <article key={comment.id}>
-          <strong>{comment.author?.username || "Steamnt player"}</strong>
-          <p>{comment.body}</p>
-        </article>
-      ))}
-      <form onSubmit={submit}>
-        <input
-          value={body}
-          maxLength={1200}
-          placeholder="Write a comment…"
-          aria-label="Write a comment"
-          onChange={(event) => setBody(event.target.value)}
-        />
-        <button type="submit" disabled={submitting || !body.trim()}>
-          {submitting ? "Posting…" : "Post"}
-        </button>
-      </form>
-      {error && <small role="alert">{error}</small>}
+      {loading && <p role="status">Loading comments…</p>}
+      {!loading && loadError && (
+        <div className="library-comments-load-error" role="alert">
+          <span>{loadError}</span>
+          <button type="button" onClick={retryComments}>
+            Try again
+          </button>
+        </div>
+      )}
+      {!loading && !loadError && !comments.length && (
+        <p>Be the first to comment.</p>
+      )}
+      {!loading &&
+        !loadError &&
+        comments.map((comment) => (
+          <article key={comment.id}>
+            <strong>{comment.author?.username || "Steamnt player"}</strong>
+            <p>{comment.body}</p>
+          </article>
+        ))}
+      {!loading && !loadError && (
+        <form onSubmit={submit}>
+          <input
+            value={body}
+            maxLength={1200}
+            placeholder="Write a comment…"
+            aria-label="Write a comment"
+            onChange={(event) => setBody(event.target.value)}
+          />
+          <button type="submit" disabled={submitting || !body.trim()}>
+            {submitting ? "Posting…" : "Post"}
+          </button>
+        </form>
+      )}
+      {actionError && <small role="alert">{actionError}</small>}
     </section>
   );
 }
