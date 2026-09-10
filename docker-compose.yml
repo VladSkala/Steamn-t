@@ -7,7 +7,7 @@ services:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "127.0.0.1:${POSTGRES_PORT}:5432"
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
@@ -21,5 +21,62 @@ services:
       retries: 10
       start_period: 5s
 
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      POSTGRES_HOST: db
+      POSTGRES_PORT: "5432"
+      DJANGO_ALLOWED_HOSTS: localhost,127.0.0.1,backend
+    ports:
+      - "127.0.0.1:${BACKEND_PORT:-8000}:8000"
+    volumes:
+      - media_data:/app/backend/media
+    depends_on:
+      db:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/games/featured/', timeout=3)",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      VITE_PROXY_TARGET: http://backend:8000
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-5173}:5173"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:5173').then((response) => process.exit(response.ok ? 0 : 1)).catch(() => process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
 volumes:
   postgres_data:
+  media_data:
