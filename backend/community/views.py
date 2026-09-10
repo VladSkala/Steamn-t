@@ -71,6 +71,7 @@ def serialize_posts(posts, request):
 def get_owned_game_ids(user):
     return LibraryItem.objects.filter(
         user=user,
+        order__user=user,
         order__status=Order.Status.COMPLETED,
     ).values_list("game_id", flat=True)
 

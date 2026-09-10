@@ -226,6 +226,7 @@ class LibraryItemUpdateView(APIView):
             LibraryItem,
             pk=item_id,
             user=request.user,
+            order__user=request.user,
             order__status=Order.Status.COMPLETED,
         )
         serializer = LibraryItemUpdateSerializer(
