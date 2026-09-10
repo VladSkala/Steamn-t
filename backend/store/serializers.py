@@ -199,6 +199,7 @@ class LibraryCollectionSerializer(serializers.ModelSerializer):
             LibraryItem.objects.filter(
                 user=user,
                 game_id__in=game_ids,
+                order__user=user,
                 order__status=Order.Status.COMPLETED,
             ).values_list("game_id", flat=True),
         )
