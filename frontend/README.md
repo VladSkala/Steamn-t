@@ -1,16 +1,30 @@
-# React + Vite
+# Steamn't frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+The Steamn't client is a React 19 single-page application built with Vite 8.
+It provides the public storefront and the authenticated cart, checkout, library,
+profile, Wishlist, review, and community experiences.
 
-Currently, two official plugins are available:
+The canonical project setup, Docker workflow, environment reference, testing
+commands, and team Git workflow are documented in the
+[root README](../README.md). The backend contract is documented in
+[docs/API.md](../docs/API.md).
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Local commands
 
-## React Compiler
+```bash
+npm ci
+npm run dev
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Additional checks:
 
-## Expanding the ESLint configuration
+```bash
+npm run lint
+npm run build
+npm run preview
+```
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+The browser uses `/api` by default. Local Vite proxies `/api` and `/media` to
+`http://127.0.0.1:8000`; Docker Compose supplies `http://backend:8000` through
+`VITE_PROXY_TARGET`. See [`.env.example`](.env.example) before configuring a
+separate API origin.
