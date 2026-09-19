@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useParams } from "react-router-dom";
 
 import GameImage from "../components/GameImage";
@@ -9,6 +9,8 @@ import ReviewsSection from "../components/ReviewsSection";
 import useGameDetails from "../hooks/useGameDetails";
 import { useAuth } from "../hooks/useAuth";
 import { useCart } from "../hooks/useCart";
+import { createReturnLocation } from "../utils/returnLocation";
+import { getDLC } from "../api/dlc";
 
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -26,7 +28,7 @@ const formatDate = (value) => {
   const date = new Date(`${value}T00:00:00`);
   return Number.isNaN(date.getTime())
     ? value
-    : new Intl.DateTimeFormat("en-US", {
+    : new Intl.DateTimeFormat(document.documentElement.dataset.locale || "en", {
         month: "long",
         day: "numeric",
         year: "numeric",
@@ -69,7 +71,7 @@ function CartActionButton({ gameId, onOwnedConflict }) {
       <Link
         className="details-button details-button-primary"
         to="/login"
-        state={{ from: location }}
+        state={{ from: createReturnLocation(location) }}
       >
         Sign in to add
       </Link>
@@ -184,6 +186,33 @@ function Requirements({ text }) {
   );
 }
 
+function GameDLCSection({ gameId }) {
+  const [state, setState] = useState({ loading: true, items: [], error: "" });
+  const [retry, setRetry] = useState(0);
+  useEffect(() => {
+    const controller = new AbortController();
+    getDLC({ game: gameId, page_size: 4 }, { signal: controller.signal })
+      .then((data) => {
+        if (!controller.signal.aborted) setState({ loading: false, items: data.results || [], error: "" });
+      })
+      .catch(() => {
+        if (!controller.signal.aborted) setState({ loading: false, items: [], error: "DLC could not be loaded." });
+      });
+    return () => controller.abort();
+  }, [gameId, retry]);
+  return <section className="store-game-description" aria-labelledby="game-dlc-heading">
+    <h2 id="game-dlc-heading">Downloadable content</h2>
+    {state.loading && <p className="store-muted">Loading DLC…</p>}
+    {state.error && <p role="alert">{state.error} <button type="button" onClick={() => { setState({ loading: true, items: [], error: "" }); setRetry((n) => n + 1); }}>Retry</button></p>}
+    {!state.loading && !state.error && state.items.length === 0 && <p className="store-muted">No DLC is available yet.</p>}
+    <div className="store-game-grid">{state.items.map((item) => <article className="store-game-card" key={item.id}>
+      <h3><Link to={`/dlc/${item.id}`}>{item.title}</Link></h3>
+      <p>{item.description}</p><strong>{formatPrice(item.price)}</strong>
+    </article>)}</div>
+    <Link to={`/games/${gameId}/dlc`}>View all DLC →</Link>
+  </section>;
+}
+
 function LoadedGame({ game, onRetry }) {
   const [tab, setTab] = useState("about");
   const title = game.title || "Untitled game";
@@ -258,14 +287,9 @@ function LoadedGame({ game, onRetry }) {
         >
           System requirements
         </button>
-        {isOwned && (
-          <Link
-            to={`/library/games/${game.id}`}
-            className="store-game-community-link"
-          >
-            Community & your review <span aria-hidden="true">↗</span>
-          </Link>
-        )}
+        <Link to={`/community?game=${game.id}`} className="store-game-community-link">
+          Community <span aria-hidden="true">↗</span>
+        </Link>
       </div>
       <div className="store-game-layout">
         <div className="store-game-content">
@@ -359,6 +383,8 @@ function LoadedGame({ game, onRetry }) {
         </aside>
       </div>
       <ReviewsSection gameId={game.id} isOwned={isOwned} />
+      <GameDLCSection gameId={game.id} />
+      <p><Link to="/bundles">Explore bundles →</Link></p>
     </div>
   );
 }

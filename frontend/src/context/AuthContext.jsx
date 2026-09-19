@@ -17,6 +17,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [isLoading, setIsLoading] = useState(hasStoredSession)
 
+  useEffect(() => {
+    document.documentElement.dataset.theme = user?.dark_theme === false ? 'light' : 'dark'
+    document.documentElement.lang = 'en'
+    document.documentElement.dataset.locale = user?.language || 'en'
+  }, [user?.dark_theme, user?.language])
+
   const logout = useCallback(() => {
     clearTokens()
     setUser(null)

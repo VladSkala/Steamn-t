@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.db.models import Count
 
-from games.models import Game, GameScreenshot, Genre
+from games.models import DLC, Game, GameBundle, GameScreenshot, Genre
 
 
 class GameScreenshotInline(admin.TabularInline):
@@ -43,3 +43,18 @@ class GenreAdmin(admin.ModelAdmin):
     @admin.display(description="Games", ordering="_game_count")
     def game_count(self, obj):
         return obj._game_count
+
+
+@admin.register(DLC)
+class DLCAdmin(admin.ModelAdmin):
+    list_display = ("title", "game", "price", "release_date", "is_available")
+    list_filter = ("is_available", "game")
+    search_fields = ("title", "game__title")
+
+
+@admin.register(GameBundle)
+class GameBundleAdmin(admin.ModelAdmin):
+    list_display = ("title", "price", "is_available")
+    list_filter = ("is_available",)
+    search_fields = ("title",)
+    filter_horizontal = ("games", "dlc")

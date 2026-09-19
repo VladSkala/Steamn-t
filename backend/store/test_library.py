@@ -66,6 +66,7 @@ class LibraryAPITests(APITestCase):
             user=user,
             game=game,
             order=order,
+            price_at_purchase=price,
         )
 
     def authenticate(self, user=None):
@@ -143,6 +144,25 @@ class LibraryAPITests(APITestCase):
             [item["id"] for item in other_response.data["items"]],
             [other_item.pk],
         )
+
+    def test_deleting_order_preserves_ownership_and_purchase_snapshot(self):
+        item = self.grant_purchase(
+            self.user,
+            self.game,
+            purchase_price=Decimal("19.99"),
+        )
+        order_id = item.order_id
+        Order.objects.get(pk=order_id).delete()
+        self.authenticate()
+
+        response = self.client.get(self.library_url)
+
+        item.refresh_from_db()
+        self.assertIsNone(item.order_id)
+        self.assertEqual(item.price_at_purchase, Decimal("19.99"))
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["items"][0]["id"], item.pk)
+        self.assertEqual(response.data["items"][0]["price_at_purchase"], "19.99")
 
     def test_library_rejects_write_methods(self):
         self.grant_purchase(self.user, self.game)

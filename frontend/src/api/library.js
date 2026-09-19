@@ -1,4 +1,5 @@
 import api from "./client";
+import { OPTIONAL_AUTH_MODE } from "./authPolicy";
 
 const ensureArray = (value, name) => {
   if (!Array.isArray(value)) {
@@ -96,9 +97,9 @@ export const deleteGameReview = async (gameId) => {
   await api.delete(`/library/games/${gameId}/review/`);
 };
 
-export const toggleGameWishlist = async (gameId) => {
-  const { data } = await api.post(`/library/games/${gameId}/wishlist/`, {});
-  return ensureObject(data, "wishlist state");
+export const toggleLibraryFavorite = async (gameId) => {
+  const { data } = await api.post(`/library/games/${gameId}/favorite/`, {});
+  return ensureObject(data, "favorite state");
 };
 
 export const togglePostReaction = async (postId) => {
@@ -109,6 +110,7 @@ export const togglePostReaction = async (postId) => {
 export const getPostComments = async (postId, { signal } = {}) => {
   const { data } = await api.get(`/library/posts/${postId}/comments/`, {
     signal,
+    authMode: OPTIONAL_AUTH_MODE,
   });
   ensureObject(data, "comments payload");
   return ensureArray(data.items, "comments");

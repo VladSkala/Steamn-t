@@ -1,30 +1,49 @@
 :root {
-  font-family:
-    Inter,
-    system-ui,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
-  color: #f4f2ff;
+  --ui-surface: var(--bg-panel);
+  --ui-surface-raised: var(--bg-card);
+  --ui-line: var(--border);
+  --ui-line-strong: var(--border-strong);
+  --ui-accent: var(--purple);
+  --ui-ease: cubic-bezier(.22,1,.36,1);
+  --ui-spring: cubic-bezier(.34,1.56,.64,1);
+  --ui-shadow: var(--shadow-panel);
+  --ui-radius: var(--radius-md);
+  --v6-panel: var(--bg-panel);
+  --v6-panel-strong: var(--bg-card);
+  --v6-line: var(--border);
+  --v6-line-strong: var(--border-strong);
+  --font-heading: var(--font-ui);
+  --bg-main: #100d18;
+  --bg-deep: #0b0911;
+  --bg-panel: #191423;
+  --bg-card: #221b30;
+  --bg-card-hover: #2e253f;
+  --border: rgba(181,161,218,.14);
+  --border-strong: rgba(181,161,218,.28);
+  --text-primary: #f6f2fc;
+  --text-secondary: #bdb3ce;
+  --text-muted: #9d90b1;
+  --blue: #a879f5;
+  --blue-bright: #c6a6ff;
+  --purple: #9259eb;
+  --purple-bright: #bb94fb;
+  --pink: #f17b99;
+  --success: #65c69a;
+  --danger: #ee7e93;
+  --content-width: 1440px;
+  --font-ui: "Steamn’t UI", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shadow-panel: 0 16px 48px #07050c66;
+  font-family: var(--font-ui);
   color-scheme: dark;
-
-  --bg-main: #090b16;
-  --bg-deep: #070914;
-  --bg-panel: #0f1423;
-  --bg-card: #141a2b;
-  --bg-card-hover: #1a2136;
-  --border: rgba(151, 164, 255, 0.14);
-  --border-strong: rgba(151, 164, 255, 0.25);
-  --text-primary: #f5f3ff;
-  --text-secondary: #b8b8ca;
-  --text-muted: #74778d;
-  --blue: #7b92ff;
-  --blue-bright: #9baaff;
-  --purple: #9c68ff;
-  --purple-bright: #bd8cff;
-  --pink: #ff5ca8;
-
   background: var(--bg-main);
 }
 
@@ -44,10 +63,7 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  background:
-    radial-gradient(circle at 15% 0%, rgba(95, 116, 255, 0.12), transparent 28%),
-    radial-gradient(circle at 90% 15%, rgba(155, 92, 235, 0.1), transparent 32%),
-    var(--bg-main);
+  background: var(--bg-main);
   color: var(--text-primary);
 }
 
@@ -56,7 +72,9 @@ body {
 }
 
 button,
-input {
+input,
+select,
+textarea {
   font: inherit;
 }
 
@@ -76,7 +94,25 @@ svg {
   max-width: 100%;
 }
 
-:where(a, button, input):focus-visible {
-  outline: 3px solid rgba(155, 170, 255, 0.9);
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--purple-bright);
   outline-offset: 3px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-main: #f5f1fa;
+  --bg-deep: #ede6f5;
+  --bg-panel: #fffcff;
+  --bg-card: #eee7f7;
+  --bg-card-hover: #e0d5f0;
+  --border: rgba(77,49,112,.17);
+  --border-strong: rgba(77,49,112,.3);
+  --text-primary: #251732;
+  --text-secondary: #594568;
+  --text-muted: #715d80;
+  --purple: #7540c3;
+  --purple-bright: #6133a4;
+  --blue: #7540c3;
+  --blue-bright: #6133a4;
 }

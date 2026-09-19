@@ -39,7 +39,7 @@ class GameOwnershipAPITests(APITestCase):
             developer="Catalog Studio",
             release_date=date(2026, 9, 2),
         )
-        order = Order.objects.create(
+        self.order = Order.objects.create(
             user=self.owner,
             total_price=self.owned_game.price,
             status=Order.Status.COMPLETED,
@@ -47,7 +47,8 @@ class GameOwnershipAPITests(APITestCase):
         LibraryItem.objects.create(
             user=self.owner,
             game=self.owned_game,
-            order=order,
+            order=self.order,
+            price_at_purchase=self.owned_game.price,
         )
 
     def test_anonymous_catalog_reports_games_as_unowned(self):
@@ -80,3 +81,14 @@ class GameOwnershipAPITests(APITestCase):
         self.assertEqual(other_response.status_code, status.HTTP_200_OK)
         self.assertTrue(owner_response.data["is_owned"])
         self.assertFalse(other_response.data["is_owned"])
+
+    def test_catalog_ownership_survives_order_deletion(self):
+        self.order.delete()
+        self.client.force_authenticate(user=self.owner)
+
+        response = self.client.get(
+            reverse("games:game-detail", kwargs={"pk": self.owned_game.pk}),
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertTrue(response.data["is_owned"])

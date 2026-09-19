@@ -1,8 +1,11 @@
 from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import IntegrityError, transaction
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.serializers import TokenRefreshSerializer
+from rest_framework_simplejwt.exceptions import InvalidToken
 
 
 User = get_user_model()
@@ -33,12 +36,13 @@ class ProfileSerializer(serializers.ModelSerializer):
         }
 
     def validate_username(self, value):
-        queryset = User.objects.filter(username__iexact=value)
+        normalized_username = value.strip()
+        queryset = User.objects.filter(username__iexact=normalized_username)
         if self.instance is not None:
             queryset = queryset.exclude(pk=self.instance.pk)
         if queryset.exists():
             raise serializers.ValidationError("A user with this username already exists.")
-        return value
+        return normalized_username
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
@@ -48,6 +52,15 @@ class ProfileSerializer(serializers.ModelSerializer):
         if queryset.exists():
             raise serializers.ValidationError("A user with this email already exists.")
         return normalized_email
+
+    def update(self, instance, validated_data):
+        try:
+            with transaction.atomic():
+                return super().update(instance, validated_data)
+        except IntegrityError as error:
+            raise serializers.ValidationError(
+                {"detail": "That email or username is already in use."}
+            ) from error
 
 
 class CurrentUserProfileSerializer(ProfileSerializer):
@@ -65,6 +78,17 @@ class CurrentUserProfileSerializer(ProfileSerializer):
             "first_name",
             "last_name",
             "avatar",
+            "cover",
+            "bio",
+            "language",
+            "dark_theme",
+            "privacy_games",
+            "privacy_wishlist",
+            "privacy_friends",
+            "privacy_activity",
+            "privacy_messages",
+            "show_online",
+            "notification_preferences",
             "created_at",
             "stats",
         )
@@ -72,6 +96,13 @@ class CurrentUserProfileSerializer(ProfileSerializer):
             "display_name",
             "stats",
         )
+
+    def validate_notification_preferences(self, value):
+        from users.models import default_notification_preferences
+        allowed = set(default_notification_preferences())
+        if not isinstance(value, dict) or set(value) != allowed or any(type(item) is not bool for item in value.values()):
+            raise serializers.ValidationError("Provide a boolean value for every notification preference.")
+        return value
 
     def get_display_name(self, user):
         return user.get_full_name().strip() or user.username
@@ -83,6 +114,7 @@ class CurrentUserProfileSerializer(ProfileSerializer):
             "wishlist_games": user.wishlist_games_count,
             "reviews": user.reviews_count,
             "posts": user.posts_count,
+            "friends": user.friends_count,
             "followers": user.followers_count,
             "following": user.following_count,
         }
@@ -111,9 +143,10 @@ class RegistrationSerializer(serializers.ModelSerializer):
         }
 
     def validate_username(self, value):
-        if User.objects.filter(username__iexact=value).exists():
+        normalized_username = value.strip()
+        if User.objects.filter(username__iexact=normalized_username).exists():
             raise serializers.ValidationError("A user with this username already exists.")
-        return value
+        return normalized_username
 
     def validate_email(self, value):
         normalized_email = value.strip().lower()
@@ -145,7 +178,13 @@ class RegistrationSerializer(serializers.ModelSerializer):
         return attrs
 
     def create(self, validated_data):
-        return User.objects.create_user(**validated_data)
+        try:
+            with transaction.atomic():
+                return User.objects.create_user(**validated_data)
+        except IntegrityError as error:
+            raise serializers.ValidationError(
+                {"detail": "That email or username is already in use."}
+            ) from error
 
 
 class LoginSerializer(TokenObtainPairSerializer):
@@ -162,6 +201,7 @@ class LoginSerializer(TokenObtainPairSerializer):
         token = super().get_token(user)
         token["username"] = user.username
         token["email"] = user.email
+        token["token_version"] = user.token_version
         return token
 
     def validate(self, attrs):
@@ -169,3 +209,15 @@ class LoginSerializer(TokenObtainPairSerializer):
         data = super().validate(attrs)
         data["user"] = ProfileSerializer(self.user, context=self.context).data
         return data
+
+
+class VersionedTokenRefreshSerializer(TokenRefreshSerializer):
+    def validate(self, attrs):
+        refresh = self.token_class(attrs["refresh"])
+        try:
+            user = User.objects.get(pk=refresh["user_id"], is_active=True)
+        except User.DoesNotExist as error:
+            raise InvalidToken("Session expired.") from error
+        if refresh.get("token_version") != user.token_version:
+            raise InvalidToken("Session expired.")
+        return super().validate(attrs)

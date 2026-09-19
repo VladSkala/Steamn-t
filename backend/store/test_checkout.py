@@ -73,6 +73,7 @@ class CheckoutAPITests(APITestCase):
             user=user,
             game=game,
             order=order,
+            price_at_purchase=game.price,
         )
         return order
 
@@ -132,7 +133,7 @@ class CheckoutAPITests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_201_CREATED)
         self.assertEqual(
             set(response.data),
-            {"id", "status", "total_price", "items", "created_at"},
+            {"id", "status", "total_price", "items", "dlc_items", "bundles", "created_at"},
         )
         self.assertEqual(response.data["status"], Order.Status.COMPLETED)
         self.assertEqual(response.data["total_price"], "19.99")
@@ -242,9 +243,25 @@ class CheckoutAPITests(APITestCase):
         self.game.save(update_fields=["price", "updated_at"])
         order.refresh_from_db()
         order_item = order.items.get()
+        library_item = LibraryItem.objects.get(user=self.user, game=self.game)
 
         self.assertEqual(order.total_price, Decimal("19.99"))
         self.assertEqual(order_item.price_at_purchase, Decimal("19.99"))
+        self.assertEqual(library_item.price_at_purchase, Decimal("19.99"))
+
+    def test_checkout_rejects_unrepresentable_total_without_partial_writes(self):
+        cart = self.fill_cart(self.user, self.game, self.second_game)
+        self.authenticate()
+
+        with patch("store.services.ORDER_TOTAL_MAX", Decimal("20.00")):
+            response = self.client.post(self.checkout_url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertEqual(response.data["code"], "order_total_too_large")
+        self.assertEqual(cart.items.count(), 2)
+        self.assertFalse(Order.objects.exists())
+        self.assertFalse(OrderItem.objects.exists())
+        self.assertFalse(LibraryItem.objects.exists())
 
     def test_checkout_rejects_an_already_owned_game_and_keeps_cart(self):
         existing_order = self.grant_purchase(self.user, self.game)

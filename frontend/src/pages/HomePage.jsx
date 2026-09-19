@@ -4,7 +4,7 @@ import { Link } from "react-router-dom";
 import CatalogFeedback from "../components/CatalogFeedback";
 import GameCard from "../components/GameCard";
 import GameImage from "../components/GameImage";
-import useCatalogData from "../hooks/useCatalogData";
+import useHomeShelves from "../hooks/useHomeShelves";
 import useFeaturedGames from "../hooks/useFeaturedGames";
 
 const money = (price) =>
@@ -147,22 +147,18 @@ function CompactColumn({ title, games }) {
 }
 
 export default function HomePage() {
-  const { games, genres, loading, error, retry } = useCatalogData({
-    includeGenres: true,
-  });
+  const { data: shelves, loading, error, retry } = useHomeShelves();
+  const games = shelves?.recent || [];
+  const genres = shelves?.genres || [];
   const {
     games: featured,
     loading: featuredLoading,
     error: featuredError,
     retry: retryFeatured,
   } = useFeaturedGames();
-  const recent = [...games].sort((a, b) =>
-    String(b.release_date).localeCompare(String(a.release_date)),
-  );
-  const free = games.filter((game) => Number(game.price) === 0);
-  const budget = games
-    .filter((game) => Number(game.price) > 0 && Number(game.price) < 20)
-    .sort((a, b) => Number(a.price) - Number(b.price));
+  const recent = shelves?.recent || [];
+  const free = shelves?.free || [];
+  const budget = shelves?.budget || [];
 
   return (
     <div className="store-home">
@@ -185,8 +181,8 @@ export default function HomePage() {
         <div className="home-featured-empty">
           <div>
             <span className="store-eyebrow">Featured games</span>
-            <h1>Featured games are coming soon.</h1>
-            <p>Explore the catalog to discover something new.</p>
+            <h1>Explore the complete catalog</h1>
+            <p>No games are featured right now. Every available game remains easy to find in the catalog.</p>
             <Link className="primary-button" to="/catalog">
               Explore catalog <span aria-hidden="true">→</span>
             </Link>
@@ -221,13 +217,12 @@ export default function HomePage() {
       ) : (
         <>
           <Shelf
-            title="Discover something new"
+            title="Recent releases"
             games={recent.slice(0, 3)}
             wide
           />
-          {games.length > 3 && (
-            <Shelf title="Explore the catalog" games={games.slice(3, 7)} />
-          )}
+          <Shelf title={shelves?.recommendation_reason || "Recommended for you"} games={shelves?.recommendations || []} />
+          {shelves?.bundles.length > 0 && <section className="store-shelf"><div className="store-section-heading"><h2>Bundle offers</h2><Link to="/bundles">Explore bundles →</Link></div><div className="home-bundle-grid">{shelves.bundles.map((bundle) => <Link className="home-bundle-card" to={`/bundles/${bundle.id}`} key={bundle.id}><GameImage src={bundle.cover || bundle.games[0]?.cover} alt="" /><div><span>COLLECTION</span><h3>{bundle.title}</h3><p>{bundle.games.length} games · {bundle.dlc.length} add-ons</p><strong>{money(bundle.price)}</strong></div></Link>)}</div></section>}
           {budget.length > 0 && (
             <Shelf title="Under $20" games={budget.slice(0, 4)} />
           )}
@@ -255,7 +250,7 @@ export default function HomePage() {
                 title="Recent releases"
                 games={recent.slice(0, 3)}
               />
-              <CompactColumn title="Worth a look" games={games.slice(-3)} />
+              <CompactColumn title="Community favourites" games={shelves?.popular || []} />
               <CompactColumn title="Free to explore" games={free.slice(0, 3)} />
             </div>
           )}

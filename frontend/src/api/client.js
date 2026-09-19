@@ -1,23 +1,16 @@
 import axios from 'axios'
+import {
+  OPTIONAL_AUTH_MODE,
+  getUnauthorizedAction,
+  shouldAttachAccessToken,
+} from './authPolicy'
 
-const configuredBaseUrl = import.meta.env.VITE_API_URL?.trim()
+const configuredBaseUrl = import.meta.env?.VITE_API_URL?.trim()
 export const API_BASE_URL = (configuredBaseUrl || '/api').replace(/\/+$/, '')
 
 export const ACCESS_TOKEN_STORAGE_KEY = 'steamnt_access_token'
 export const REFRESH_TOKEN_STORAGE_KEY = 'steamnt_refresh_token'
 export const AUTH_CLEARED_EVENT = 'steamnt:auth-cleared'
-
-const publicAuthPaths = [
-  '/auth/register/',
-  '/auth/token/',
-  '/auth/token/refresh/',
-]
-
-const isPublicAuthRequest = (url = '') =>
-  publicAuthPaths.some((path) => url.includes(path))
-
-const shouldSkipAuth = (config = {}) =>
-  config.skipAuth === true || isPublicAuthRequest(config.url)
 
 export const getAccessToken = () =>
   localStorage.getItem(ACCESS_TOKEN_STORAGE_KEY)
@@ -51,7 +44,7 @@ let refreshPromise = null
 api.interceptors.request.use((config) => {
   const access = getAccessToken()
 
-  if (access && !shouldSkipAuth(config)) {
+  if (shouldAttachAccessToken(config, access)) {
     config.headers = config.headers ?? {}
     config.headers.Authorization = `Bearer ${access}`
   }
@@ -64,18 +57,30 @@ api.interceptors.response.use(
   async (error) => {
     const original = error.config
 
-    if (
-      error.response?.status !== 401 ||
-      !original ||
-      original._retry ||
-      shouldSkipAuth(original)
-    ) {
+    const refresh = getRefreshToken()
+    const unauthorizedAction = getUnauthorizedAction({
+      status: error.response?.status,
+      config: original,
+      hasRefresh: Boolean(refresh),
+    })
+
+    if (unauthorizedAction === 'reject') {
       return Promise.reject(error)
     }
 
-    const refresh = getRefreshToken()
+    const retryAnonymously = () => {
+      original._anonymousRetry = true
+      original.skipAuth = true
+      if (original.headers) delete original.headers.Authorization
+      return api(original)
+    }
 
-    if (!refresh) {
+    if (unauthorizedAction === 'retry-anonymous') {
+      clearTokens()
+      return retryAnonymously()
+    }
+
+    if (unauthorizedAction === 'clear-and-reject') {
       clearTokens()
       return Promise.reject(error)
     }
@@ -102,6 +107,9 @@ api.interceptors.response.use(
       return api(original)
     } catch (refreshError) {
       clearTokens()
+      if (original.authMode === OPTIONAL_AUTH_MODE) {
+        return retryAnonymously()
+      }
       return Promise.reject(refreshError)
     }
   },

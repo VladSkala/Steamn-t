@@ -1,11 +1,14 @@
 from decimal import Decimal
 
 from django.conf import settings
-from django.core.validators import MinValueValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 
 from core.models import TimeStampedModel
-from games.models import Game
+from games.models import DLC, Game, GameBundle
+
+
+ORDER_TOTAL_MAX = Decimal("999999999999.99")
 
 
 class Cart(TimeStampedModel):
@@ -48,6 +51,33 @@ class CartItem(TimeStampedModel):
         return f"{self.game.title} in cart #{self.cart_id}"
 
 
+class CartDLCItem(TimeStampedModel):
+    """An add-on awaiting checkout in the user's existing cart."""
+
+    cart = models.ForeignKey(
+        Cart,
+        on_delete=models.CASCADE,
+        related_name="dlc_items",
+    )
+    dlc = models.ForeignKey(
+        DLC,
+        on_delete=models.CASCADE,
+        related_name="cart_items",
+    )
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["cart", "dlc"],
+                name="unique_cart_dlc",
+            ),
+        ]
+
+    def __str__(self) -> str:
+        return f"{self.dlc.title} in cart #{self.cart_id}"
+
+
 class Order(TimeStampedModel):
     """Immutable purchase header created by demo checkout."""
 
@@ -55,6 +85,7 @@ class Order(TimeStampedModel):
         PENDING = "pending", "Pending"
         COMPLETED = "completed", "Completed"
         CANCELLED = "cancelled", "Cancelled"
+        REFUNDED = "refunded", "Refunded"
 
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -62,10 +93,13 @@ class Order(TimeStampedModel):
         related_name="orders",
     )
     total_price = models.DecimalField(
-        max_digits=10,
+        max_digits=14,
         decimal_places=2,
         default=Decimal("0.00"),
-        validators=[MinValueValidator(Decimal("0.00"))],
+        validators=[
+            MinValueValidator(Decimal("0.00")),
+            MaxValueValidator(ORDER_TOTAL_MAX),
+        ],
     )
     status = models.CharField(
         max_length=20,
@@ -80,6 +114,10 @@ class Order(TimeStampedModel):
             models.CheckConstraint(
                 condition=models.Q(total_price__gte=0),
                 name="order_total_non_negative",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(total_price__lte=ORDER_TOTAL_MAX),
+                name="order_total_within_range",
             ),
         ]
 
@@ -123,6 +161,55 @@ class OrderItem(TimeStampedModel):
         return f"{self.game.title} in order #{self.order_id}"
 
 
+class OrderDLCItem(TimeStampedModel):
+    """Purchased add-on with its exact checkout-time price."""
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="dlc_items")
+    dlc = models.ForeignKey(DLC, on_delete=models.PROTECT, related_name="order_items")
+    price_at_purchase = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    class Meta:
+        ordering = ["created_at", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "dlc"],
+                name="unique_order_dlc",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price_at_purchase__gte=0),
+                name="order_dlc_price_non_negative",
+            ),
+        ]
+
+
+class BundlePurchase(TimeStampedModel):
+    """Receipt line preserving the bundle offer used for a purchase."""
+
+    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name="bundles")
+    bundle = models.ForeignKey(
+        GameBundle,
+        on_delete=models.PROTECT,
+        related_name="purchases",
+    )
+    price_at_purchase = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["order", "bundle"],
+                name="unique_order_bundle",
+            ),
+        ]
+
+
 class LibraryItem(TimeStampedModel):
     """A permanent link between a user and a purchased game."""
 
@@ -138,8 +225,15 @@ class LibraryItem(TimeStampedModel):
     )
     order = models.ForeignKey(
         Order,
-        on_delete=models.CASCADE,
+        on_delete=models.SET_NULL,
         related_name="library_items",
+        blank=True,
+        null=True,
+    )
+    price_at_purchase = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
     )
     is_favorite = models.BooleanField(default=False)
 
@@ -156,10 +250,50 @@ class LibraryItem(TimeStampedModel):
                 fields=["user", "game"],
                 name="unique_library_user_game",
             ),
+            models.CheckConstraint(
+                condition=models.Q(price_at_purchase__gte=0),
+                name="library_item_price_non_negative",
+            ),
         ]
 
     def __str__(self) -> str:
         return f"{self.game.title} in {self.user.username}'s library"
+
+
+class LibraryDLCItem(TimeStampedModel):
+    """Permanent ownership of one purchased add-on."""
+
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="library_dlc_items",
+    )
+    dlc = models.ForeignKey(DLC, on_delete=models.PROTECT, related_name="library_items")
+    order = models.ForeignKey(
+        Order,
+        on_delete=models.SET_NULL,
+        related_name="library_dlc_items",
+        blank=True,
+        null=True,
+    )
+    price_at_purchase = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    class Meta:
+        ordering = ["-created_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "dlc"],
+                name="unique_library_user_dlc",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price_at_purchase__gte=0),
+                name="library_dlc_price_non_negative",
+            ),
+        ]
 
 
 class LibraryCollection(TimeStampedModel):

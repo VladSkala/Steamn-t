@@ -1,0 +1,5 @@
+# Optional: only needed when running Django on the host against the Compose database.
+services:
+  db:
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-55433}:5432"

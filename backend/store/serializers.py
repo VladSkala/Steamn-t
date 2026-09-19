@@ -1,16 +1,20 @@
 from decimal import Decimal
 
 from django.db import IntegrityError
+from django.db.models import Q
 from rest_framework import serializers
 
-from games.models import Game
+from games.models import DLC, Game
 from store.models import (
     Cart,
+    CartDLCItem,
     CartItem,
     LibraryCollection,
     LibraryItem,
     Order,
+    OrderDLCItem,
     OrderItem,
+    BundlePurchase,
 )
 
 
@@ -51,23 +55,64 @@ class CartItemSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class CartDLCSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
+    cover = serializers.SerializerMethodField()
+
+    class Meta:
+        model = DLC
+        fields = ("id", "title", "price", "cover", "game_id")
+        read_only_fields = fields
+
+
+class CartDLCItemSerializer(serializers.ModelSerializer):
+    dlc = CartDLCSerializer(read_only=True)
+
+    class Meta:
+        model = CartDLCItem
+        fields = ("id", "dlc", "created_at")
+        read_only_fields = fields
+
+
 class CartSerializer(serializers.ModelSerializer):
     """Authenticated user's cart, items and calculated total."""
 
     items = CartItemSerializer(many=True, read_only=True)
+    dlc_items = CartDLCItemSerializer(many=True, read_only=True)
     total = serializers.SerializerMethodField()
 
     class Meta:
         model = Cart
-        fields = ("id", "items", "total")
+        fields = ("id", "items", "dlc_items", "total")
         read_only_fields = fields
 
     def get_total(self, cart: Cart) -> str:
         total = sum(
             (item.game.price for item in cart.items.all()),
             start=Decimal("0.00"),
-        )
+        ) + sum((item.dlc.price for item in cart.dlc_items.all()), start=Decimal("0.00"))
         return format(total, ".2f")
+
+
+class CartDLCItemCreateSerializer(serializers.ModelSerializer):
+    dlc_id = serializers.PrimaryKeyRelatedField(
+        queryset=DLC.objects.filter(is_available=True), source="dlc", write_only=True,
+    )
+
+    class Meta:
+        model = CartDLCItem
+        fields = ("dlc_id",)
+
+    def validate_dlc_id(self, dlc):
+        cart = self.context["cart"]
+        if CartDLCItem.objects.filter(cart=cart, dlc=dlc).exists():
+            raise serializers.ValidationError("This DLC is already in your cart.")
+        return dlc
+
+    def create(self, validated_data):
+        try:
+            return CartDLCItem.objects.create(cart=self.context["cart"], **validated_data)
+        except IntegrityError as error:
+            raise serializers.ValidationError({"dlc_id": "This DLC is already in your cart."}) from error
 
 
 class CartItemCreateSerializer(serializers.ModelSerializer):
@@ -123,14 +168,34 @@ class OrderItemSerializer(serializers.ModelSerializer):
         read_only_fields = fields
 
 
+class OrderDLCItemSerializer(serializers.ModelSerializer):
+    dlc = CartDLCSerializer(read_only=True)
+
+    class Meta:
+        model = OrderDLCItem
+        fields = ("id", "dlc", "price_at_purchase")
+        read_only_fields = fields
+
+
+class BundlePurchaseSerializer(serializers.ModelSerializer):
+    title = serializers.CharField(source="bundle.title", read_only=True)
+
+    class Meta:
+        model = BundlePurchase
+        fields = ("id", "bundle_id", "title", "price_at_purchase")
+        read_only_fields = fields
+
+
 class OrderSerializer(serializers.ModelSerializer):
     """Read-only representation returned after a successful checkout."""
 
     items = OrderItemSerializer(many=True, read_only=True)
+    dlc_items = OrderDLCItemSerializer(many=True, read_only=True)
+    bundles = BundlePurchaseSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
-        fields = ("id", "status", "total_price", "items", "created_at")
+        fields = ("id", "status", "total_price", "items", "dlc_items", "bundles", "created_at")
         read_only_fields = fields
 
 
@@ -138,12 +203,6 @@ class LibraryItemSerializer(serializers.ModelSerializer):
     """Stable KAN-22 purchased-game response contract."""
 
     game = OrderGameSerializer(read_only=True)
-    price_at_purchase = serializers.DecimalField(
-        source="annotated_price_at_purchase",
-        max_digits=10,
-        decimal_places=2,
-        read_only=True,
-    )
     purchased_at = serializers.DateTimeField(read_only=True)
 
     class Meta:
@@ -199,9 +258,7 @@ class LibraryCollectionSerializer(serializers.ModelSerializer):
             LibraryItem.objects.filter(
                 user=user,
                 game_id__in=game_ids,
-                order__user=user,
-                order__status=Order.Status.COMPLETED,
-            ).values_list("game_id", flat=True),
+            ).filter(Q(order__isnull=True) | Q(order__user=user)).values_list("game_id", flat=True),
         )
         if owned_ids != game_ids:
             raise serializers.ValidationError(

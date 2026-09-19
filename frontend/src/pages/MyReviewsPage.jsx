@@ -18,7 +18,7 @@ const isCanceledRequest = (error) =>
 const formatDate = (value) => {
   const date = new Date(value);
   if (!value || Number.isNaN(date.getTime())) return "Unknown date";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(document.documentElement.dataset.locale || "en", {
     day: "numeric",
     month: "short",
     year: "numeric",

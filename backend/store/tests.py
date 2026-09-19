@@ -2,7 +2,7 @@ from datetime import date
 from decimal import Decimal
 
 from django.contrib.auth import get_user_model
-from django.db import IntegrityError, transaction
+from django.db import DataError, IntegrityError, transaction
 from django.test import TestCase
 from django.urls import reverse
 from rest_framework import status
@@ -74,6 +74,7 @@ class StoreModelTests(TestCase):
             user=self.user,
             game=self.game,
             order=order,
+            price_at_purchase=self.game.price,
         )
 
         with self.assertRaises(IntegrityError):
@@ -82,6 +83,7 @@ class StoreModelTests(TestCase):
                     user=self.user,
                     game=self.game,
                     order=order,
+                    price_at_purchase=self.game.price,
                 )
 
     def test_library_purchased_at_uses_creation_time(self):
@@ -94,9 +96,27 @@ class StoreModelTests(TestCase):
             user=self.user,
             game=self.game,
             order=order,
+            price_at_purchase=self.game.price,
         )
 
         self.assertEqual(library_item.purchased_at, library_item.created_at)
+
+    def test_order_total_constraints_are_enforced_by_database(self):
+        for value in (Decimal("-0.01"), Decimal("1000000000000.00")):
+            # PostgreSQL rejects precision overflow before evaluating CHECK;
+            # SQLite's numeric storage reaches the CHECK constraint instead.
+            with self.subTest(value=value), self.assertRaises((IntegrityError, DataError)):
+                with transaction.atomic():
+                    Order.objects.create(user=self.user, total_price=value)
+
+    def test_library_purchase_price_constraint_is_enforced_by_database(self):
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                LibraryItem.objects.create(
+                    user=self.user,
+                    game=self.game,
+                    price_at_purchase=Decimal("-0.01"),
+                )
 
 
 class CartAPITests(APITestCase):
@@ -168,8 +188,9 @@ class CartAPITests(APITestCase):
         response = self.client.get(self.cart_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(set(response.data), {"id", "items", "total"})
+        self.assertEqual(set(response.data), {"id", "items", "dlc_items", "total"})
         self.assertEqual(response.data["items"], [])
+        self.assertEqual(response.data["dlc_items"], [])
         self.assertEqual(response.data["total"], "0.00")
         self.assertTrue(Cart.objects.filter(user=self.user).exists())
 
@@ -231,7 +252,7 @@ class CartAPITests(APITestCase):
         CartItem.objects.create(cart=cart, game=self.second_game)
         self.authenticate()
 
-        with self.assertNumQueries(3):
+        with self.assertNumQueries(4):
             response = self.client.get(self.cart_url)
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)

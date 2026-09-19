@@ -1,4 +1,5 @@
 import api from "./client";
+import { OPTIONAL_AUTH_MODE } from "./authPolicy";
 
 const normalizeCollection = (data, resourceName) => {
   if (Array.isArray(data)) return data;
@@ -80,6 +81,7 @@ export const getGames = async ({
 } = {}) => {
   const { data } = await api.get("/games/", {
     signal,
+    authMode: OPTIONAL_AUTH_MODE,
     params: buildGameParams({
       search,
       genre,
@@ -94,16 +96,25 @@ export const getGames = async ({
 };
 
 export const getFeaturedGames = async ({ signal } = {}) => {
-  const { data } = await api.get("/games/featured/", { signal });
+  const { data } = await api.get("/games/featured/", {
+    signal,
+    authMode: OPTIONAL_AUTH_MODE,
+  });
   return normalizeCollection(data, "featured games");
 };
 
 export const getGenres = async ({ signal } = {}) => {
-  const { data } = await api.get("/genres/", { signal, skipAuth: true });
+  const { data } = await api.get("/genres/", {
+    signal,
+    authMode: OPTIONAL_AUTH_MODE,
+  });
   return normalizeCollection(data, "genres");
 };
 
 export const getGameById = async (id, { signal } = {}) => {
-  const { data } = await api.get(`/games/${id}/`, { signal });
+  const { data } = await api.get(`/games/${id}/`, {
+    signal,
+    authMode: OPTIONAL_AUTH_MODE,
+  });
   return data;
 };

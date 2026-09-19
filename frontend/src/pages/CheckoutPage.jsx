@@ -41,6 +41,7 @@ function CheckoutPage() {
     useCart();
   const { refreshWishlist, removePurchasedGames } = useWishlist();
   const [isPaying, setIsPaying] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("demo");
   const [checkoutError, setCheckoutError] = useState("");
   const [alreadyOwnedGameIds, setAlreadyOwnedGameIds] = useState([]);
   const mountedRef = useRef(true);
@@ -56,6 +57,7 @@ function CheckoutPage() {
   );
 
   const items = Array.isArray(cart?.items) ? cart.items : [];
+  const dlcItems = Array.isArray(cart?.dlc_items) ? cart.dlc_items : [];
 
   const handleRetry = () => {
     setCheckoutError("");
@@ -74,7 +76,7 @@ function CheckoutPage() {
     setAlreadyOwnedGameIds([]);
 
     try {
-      const order = await checkoutCart({ signal: controller.signal });
+      const order = await checkoutCart({ signal: controller.signal, paymentMethod });
 
       if (controller.signal.aborted || !mountedRef.current) return;
 
@@ -89,11 +91,10 @@ function CheckoutPage() {
       removePurchasedGames(purchasedGameIds);
       refreshWishlist().catch(() => {});
       clearCart();
-      navigate("/library", {
+      navigate(`/orders/${order.id}`, {
         replace: true,
         state: {
           checkoutSuccess: true,
-          order,
         },
       });
     } catch (requestError) {
@@ -159,13 +160,13 @@ function CheckoutPage() {
     );
   }
 
-  if (items.length === 0) {
+  if (items.length === 0 && dlcItems.length === 0) {
     return (
       <div className="checkout-page">
         <section className="checkout-empty-state">
           <span className="section-kicker">CHECKOUT</span>
           <h1>Your cart is empty.</h1>
-          <p>Add at least one game before starting the demo checkout.</p>
+          <p>Add a game or DLC before starting the demo checkout.</p>
           <Link className="primary-button" to="/catalog">
             Browse catalog
             <span>→</span>
@@ -209,10 +210,10 @@ function CheckoutPage() {
           <div className="checkout-card-heading">
             <div>
               <span className="section-kicker">ORDER</span>
-              <h2 id="checkout-items-title">Your games</h2>
+              <h2 id="checkout-items-title">Your digital items</h2>
             </div>
             <span>
-              {items.length} {items.length === 1 ? "game" : "games"}
+              {items.length + dlcItems.length} items
             </span>
           </div>
 
@@ -264,14 +265,20 @@ function CheckoutPage() {
                 </article>
               );
             })}
+            {dlcItems.map((item) => <article className="checkout-item" key={`dlc-${item.id}`}>
+              <div className="checkout-item-cover" aria-hidden="true">{item.dlc.cover && <img src={item.dlc.cover} alt="" />}</div>
+              <div className="checkout-item-info"><Link to={`/dlc/${item.dlc.id}`}>{item.dlc.title}</Link><span>DLC</span></div>
+              <strong>{formatPrice(item.dlc.price)}</strong>
+            </article>)}
           </div>
         </section>
 
         <aside className="checkout-summary">
+          <label>Payment method<select value={paymentMethod} onChange={(event) => setPaymentMethod(event.target.value)} disabled={isPaying}><option value="demo">Simulated payment</option><option value="wallet">Wallet balance</option></select></label>
           <span className="section-kicker">SUMMARY</span>
           <div className="checkout-summary-row">
             <span>Items</span>
-            <span>{items.length}</span>
+            <span>{items.length + dlcItems.length}</span>
           </div>
           <div className="checkout-summary-total">
             <span>Total</span>
@@ -284,13 +291,14 @@ function CheckoutPage() {
             onClick={handlePayDemo}
             disabled={isPaying}
           >
-            {isPaying ? "Processing…" : "Pay Demo"}
+            {isPaying ? "Processing…" : paymentMethod === "wallet" ? "Pay with wallet" : "Pay Demo"}
           </button>
 
           <p>
             Demo mode only. A successful checkout creates the order and moves
-            purchased games into your library.
+            purchased games and DLC into your library.
           </p>
+          <p><Link to="/legal/refund">Read the demo refund policy</Link></p>
         </aside>
       </div>
     </div>

@@ -1,12 +1,9 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import {
-  createPostComment,
-  getPostComments,
-  togglePostReaction,
-} from "../api/library";
+import { togglePostReaction } from "../api/library";
 import CatalogFeedback from "../components/CatalogFeedback";
+import PostComments from "../components/community/PostComments";
 import LibraryFrame from "../components/library/LibraryFrame";
 import LibraryPostCard from "../components/library/LibraryPostCard";
 import useLibrary from "../hooks/useLibrary";
@@ -26,113 +23,6 @@ const kinds = [
   ["news", "News"],
   ["community", "Community"],
 ];
-
-function CommentThread({ post, onCreated }) {
-  const [comments, setComments] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState("");
-  const [actionError, setActionError] = useState("");
-  const [reloadKey, setReloadKey] = useState(0);
-  const [body, setBody] = useState("");
-  const [submitting, setSubmitting] = useState(false);
-
-  useEffect(() => {
-    const controller = new AbortController();
-    getPostComments(post.id, { signal: controller.signal })
-      .then((items) => {
-        if (!controller.signal.aborted) {
-          setComments(items);
-          setLoadError("");
-          setLoading(false);
-        }
-      })
-      .catch((requestError) => {
-        if (controller.signal.aborted) return;
-        setLoadError(
-          requestError?.response?.data?.detail ||
-            (requestError?.response
-              ? "Comments could not be loaded."
-              : "The comments service is unavailable. Check the backend and try again."),
-        );
-        setLoading(false);
-      });
-    return () => controller.abort();
-  }, [post.id, reloadKey]);
-
-  const retryComments = () => {
-    setComments([]);
-    setLoading(true);
-    setLoadError("");
-    setActionError("");
-    setReloadKey((value) => value + 1);
-  };
-
-  const submit = async (event) => {
-    event.preventDefault();
-    if (!body.trim()) return;
-    setSubmitting(true);
-    setActionError("");
-    try {
-      const comment = await createPostComment(post.id, body.trim());
-      setComments((current) => [...current, comment]);
-      setBody("");
-      onCreated();
-    } catch (requestError) {
-      setActionError(
-        requestError?.response?.data?.body?.[0] ||
-          requestError?.response?.data?.detail ||
-          (requestError?.response
-            ? "Your comment could not be published."
-            : "The comments service is unavailable. Check the backend and try again."),
-      );
-    } finally {
-      setSubmitting(false);
-    }
-  };
-
-  return (
-    <section
-      className="library-comments"
-      aria-label={`Comments on ${post.title}`}
-    >
-      {loading && <p role="status">Loading comments…</p>}
-      {!loading && loadError && (
-        <div className="library-comments-load-error" role="alert">
-          <span>{loadError}</span>
-          <button type="button" onClick={retryComments}>
-            Try again
-          </button>
-        </div>
-      )}
-      {!loading && !loadError && !comments.length && (
-        <p>Be the first to comment.</p>
-      )}
-      {!loading &&
-        !loadError &&
-        comments.map((comment) => (
-          <article key={comment.id}>
-            <strong>{comment.author?.username || "Steamnt player"}</strong>
-            <p>{comment.body}</p>
-          </article>
-        ))}
-      {!loading && !loadError && (
-        <form onSubmit={submit}>
-          <input
-            value={body}
-            maxLength={1200}
-            placeholder="Write a comment…"
-            aria-label="Write a comment"
-            onChange={(event) => setBody(event.target.value)}
-          />
-          <button type="submit" disabled={submitting || !body.trim()}>
-            {submitting ? "Posting…" : "Post"}
-          </button>
-        </form>
-      )}
-      {actionError && <small role="alert">{actionError}</small>}
-    </section>
-  );
-}
 
 function LibraryFeedPage() {
   const sidebar = useLibrary();
@@ -240,8 +130,10 @@ function LibraryFeedPage() {
                 }
               >
                 {openPostId === post.id && (
-                  <CommentThread
+                  <PostComments
                     post={post}
+                    canComment
+                    onRemoved={() => updatePost(post.id, { comment_count: Math.max(0, post.comment_count - 1) })}
                     onCreated={() => commentCreated(post)}
                   />
                 )}

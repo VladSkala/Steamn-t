@@ -38,6 +38,36 @@ class UserModelTests(APITestCase):
                     password="Safe-test-password-2026!",
                 )
 
+    def test_email_uniqueness_is_case_insensitive_in_database(self):
+        User.objects.create_user(
+            username="first-email-owner",
+            email="CaseSensitive@Example.com",
+            password="Safe-test-password-2026!",
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                User.objects.create_user(
+                    username="second-email-owner",
+                    email="casesensitive@example.com",
+                    password="Safe-test-password-2026!",
+                )
+
+    def test_username_uniqueness_is_case_insensitive_in_database(self):
+        User.objects.create_user(
+            username="CaseSensitiveName",
+            email="first-username@example.com",
+            password="Safe-test-password-2026!",
+        )
+
+        with self.assertRaises(IntegrityError):
+            with transaction.atomic():
+                User.objects.create_user(
+                    username="casesensitivename",
+                    email="second-username@example.com",
+                    password="Safe-test-password-2026!",
+                )
+
 
 class RegistrationAPITests(APITestCase):
     url = reverse("users:register")

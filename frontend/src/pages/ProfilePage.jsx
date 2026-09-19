@@ -34,7 +34,7 @@ const formatDate = (value) => {
   if (!value) return "—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "—";
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.DateTimeFormat(document.documentElement.dataset.locale || "en", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -605,7 +605,7 @@ function ProfilePage() {
               video: activityPosts.filter((post) => post.kind === "video"),
               guide: activityPosts.filter((post) => post.kind === "guide"),
               community: activityPosts.filter(
-                (post) => post.kind === "community" || post.kind === "news",
+                (post) => ["community", "forum", "news"].includes(post.kind),
               ),
               loading: false,
               error: null,
@@ -705,6 +705,7 @@ function ProfilePage() {
   const fullName = getFullName(profile, user);
   const libraryPreview = library.items.slice(0, 4);
   const coverImage =
+    profile?.cover ||
     libraryPreview[0]?.game?.hero_image_url ||
     libraryPreview[0]?.game?.cover ||
     "";
@@ -776,7 +777,7 @@ function ProfilePage() {
           style={
             coverImage
               ? {
-                  backgroundImage: `linear-gradient(180deg, rgba(1, 35, 44, .06), rgba(1, 22, 29, .28)), url(${coverImage})`,
+                  backgroundImage: `linear-gradient(180deg, rgba(16, 13, 24, .06), rgba(16, 13, 24, .28)), url(${coverImage})`,
                 }
               : undefined
           }
@@ -796,6 +797,8 @@ function ProfilePage() {
               <h1>{username}</h1>
             </div>
             {fullName && <span className="profile-full-name">{fullName}</span>}
+            {profile.bio && <p className="profile-bio">{profile.bio}</p>}
+            <Link to={`/users/${profile.id}`}>View public profile</Link>
             <span className="profile-member-since">
               Member since {formatDate(profile.created_at)}
             </span>
@@ -818,7 +821,7 @@ function ProfilePage() {
       )}
 
       <div className="profile-layout">
-        <main className="profile-main">
+        <section className="profile-main">
           <section className="profile-section" id="activity">
             <div className="profile-section-title">
               <h2>Profile activity</h2>
@@ -1080,7 +1083,7 @@ function ProfilePage() {
               </div>
             )}
           </section>
-        </main>
+        </section>
 
         <aside className="profile-sidebar">
           <section className="profile-side-card">

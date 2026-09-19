@@ -110,7 +110,12 @@ class FeaturedGameAPITests(APITestCase):
             total_price=owned_game.price,
             status=Order.Status.COMPLETED,
         )
-        LibraryItem.objects.create(user=user, game=owned_game, order=order)
+        LibraryItem.objects.create(
+            user=user,
+            game=owned_game,
+            order=order,
+            price_at_purchase=owned_game.price,
+        )
         self.client.force_authenticate(user=user)
 
         response = self.client.get(self.url)

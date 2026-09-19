@@ -30,3 +30,12 @@ export const addCartItem = async (gameId, { signal } = {}) => {
 export const removeCartItem = async (gameId, { signal } = {}) => {
   await api.delete(`/cart/items/${gameId}/`, { signal })
 }
+
+export const addCartDLC = async (dlcId) => {
+  const { data } = await api.post('/cart/dlc-items/', { dlc_id: dlcId })
+  return normalizeCart(data)
+}
+
+export const removeCartDLC = async (dlcId) => {
+  await api.delete(`/cart/dlc-items/${dlcId}/`)
+}

@@ -1,15 +1,26 @@
 from django.urls import path
 
 from community.views import (
+    CommunityPostDetailView,
+    CommunityPostFeedView,
+    FriendRemoveView,
+    FriendRequestAcceptView,
+    FriendRequestCancelView,
+    FriendRequestCreateView,
+    FriendRequestRejectView,
+    FriendSearchView,
+    FriendsOverviewView,
     GameReviewCollectionView,
     GameReviewDetailView,
     GameReviewView,
-    GameWishlistToggleView,
+    GameFavoriteToggleView,
+    LegacyGameWishlistToggleView,
     LibraryFeedView,
     LibraryGameView,
     LibraryHomeContentView,
     MyReviewListView,
     PostCommentListCreateView,
+    PostCommentDetailView,
     PostReactionToggleView,
     WishlistItemCreateView,
     WishlistItemDeleteView,
@@ -20,6 +31,40 @@ from community.views import (
 app_name = "community"
 
 urlpatterns = [
+    path("library/posts/<int:post_id>/comments/<int:comment_id>/", PostCommentDetailView.as_view()),
+    path("community/posts/", CommunityPostFeedView.as_view(), name="community-posts"),
+    path(
+        "community/posts/<int:post_id>/",
+        CommunityPostDetailView.as_view(),
+        name="community-post-detail",
+    ),
+    path("friends/", FriendsOverviewView.as_view(), name="friends-overview"),
+    path("friends/search/", FriendSearchView.as_view(), name="friend-search"),
+    path(
+        "friends/requests/",
+        FriendRequestCreateView.as_view(),
+        name="friend-request-create",
+    ),
+    path(
+        "friends/requests/<int:request_id>/accept/",
+        FriendRequestAcceptView.as_view(),
+        name="friend-request-accept",
+    ),
+    path(
+        "friends/requests/<int:request_id>/reject/",
+        FriendRequestRejectView.as_view(),
+        name="friend-request-reject",
+    ),
+    path(
+        "friends/requests/<int:request_id>/cancel/",
+        FriendRequestCancelView.as_view(),
+        name="friend-request-cancel",
+    ),
+    path(
+        "friends/<int:user_id>/",
+        FriendRemoveView.as_view(),
+        name="friend-remove",
+    ),
     path("reviews/my/", MyReviewListView.as_view(), name="my-reviews"),
     path(
         "games/<int:game_id>/reviews/",
@@ -55,9 +100,14 @@ urlpatterns = [
         name="game-review",
     ),
     path(
+        "library/games/<int:game_id>/favorite/",
+        GameFavoriteToggleView.as_view(),
+        name="game-favorite",
+    ),
+    path(
         "library/games/<int:game_id>/wishlist/",
-        GameWishlistToggleView.as_view(),
-        name="game-wishlist",
+        LegacyGameWishlistToggleView.as_view(),
+        name="legacy-game-wishlist",
     ),
     path(
         "library/posts/<int:post_id>/reaction/",

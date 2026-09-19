@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import CatalogFeedback from "../components/CatalogFeedback";
 import { useCart } from "../hooks/useCart";
+import { removeCartDLC } from "../api/cart";
 
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
@@ -27,6 +28,7 @@ function CartPage() {
   const { cart, isLoading, error, removeFromCart, refreshCart } = useCart();
   const [removingGameId, setRemovingGameId] = useState(null);
   const [actionError, setActionError] = useState("");
+  const [removingDLCId, setRemovingDLCId] = useState(null);
 
   const handleRetry = () => {
     setActionError("");
@@ -79,8 +81,17 @@ function CartPage() {
   }
 
   const items = Array.isArray(cart?.items) ? cart.items : [];
+  const dlcItems = Array.isArray(cart?.dlc_items) ? cart.dlc_items : [];
 
-  if (items.length === 0) {
+  const handleRemoveDLC = async (dlcId) => {
+    setRemovingDLCId(dlcId);
+    setActionError("");
+    try { await removeCartDLC(dlcId); await refreshCart(); }
+    catch (requestError) { setActionError(requestError?.response?.data?.detail || "Unable to remove DLC."); }
+    finally { setRemovingDLCId(null); }
+  };
+
+  if (items.length === 0 && dlcItems.length === 0) {
     return (
       <div className="cart-page">
         <CartHeader />
@@ -103,7 +114,7 @@ function CartPage() {
       <CartHeader />
       <div className="cart-topline">
         <span>
-          {items.length} {items.length === 1 ? "game" : "games"} ready for
+          {items.length + dlcItems.length} digital items ready for
           checkout
         </span>
         <Link className="cart-secondary-link" to="/catalog">
@@ -168,6 +179,14 @@ function CartPage() {
               </article>
             );
           })}
+          {dlcItems.map((item) => <article className="cart-item" key={`dlc-${item.id}`}>
+            <Link className="cart-item-cover" to={`/dlc/${item.dlc.id}`}>
+              {item.dlc.cover ? <img src={item.dlc.cover} alt="" /> : <span className="cart-item-cover-fallback">DLC</span>}
+            </Link>
+            <div className="cart-item-info"><Link className="cart-item-title" to={`/dlc/${item.dlc.id}`}>{item.dlc.title}</Link><p>Downloadable content</p></div>
+            <strong className="cart-item-price">{formatPrice(item.dlc.price)}</strong>
+            <button type="button" className="cart-remove-button" disabled={removingDLCId !== null} onClick={() => handleRemoveDLC(item.dlc.id)}>{removingDLCId === item.dlc.id ? "Removing…" : "Remove"}</button>
+          </article>)}
         </section>
 
         <aside className="cart-summary">
@@ -176,6 +195,7 @@ function CartPage() {
             <span>Digital games</span>
             <span>{items.length}</span>
           </div>
+          <div className="cart-summary-row"><span>DLC</span><span>{dlcItems.length}</span></div>
           <div className="cart-summary-total">
             <span>Total</span>
             <strong>{formatPrice(cart?.total)}</strong>

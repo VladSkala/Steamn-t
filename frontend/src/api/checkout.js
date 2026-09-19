@@ -15,7 +15,7 @@ const normalizeCheckoutOrder = (data) => {
   return data
 }
 
-export const checkoutCart = async ({ signal } = {}) => {
-  const { data } = await api.post('/orders/checkout/', {}, { signal })
+export const checkoutCart = async ({ signal, paymentMethod = 'demo' } = {}) => {
+  const { data } = await api.post('/orders/checkout/', { payment_method: paymentMethod }, { signal })
   return normalizeCheckoutOrder(data)
 }

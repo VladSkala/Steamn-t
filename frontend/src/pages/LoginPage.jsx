@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { resolveReturnLocation } from '../utils/returnLocation'
 
 function LoginPage() {
   const { login } = useAuth()
@@ -14,7 +15,7 @@ function LoginPage() {
     event.preventDefault(); setError(''); setLoading(true)
     try {
       await login(form)
-      navigate(location.state?.from?.pathname || '/profile', { replace: true })
+      navigate(resolveReturnLocation(location.state?.from), { replace: true })
     } catch (err) {
       setError(err.response?.data?.detail || 'Unable to sign in. Check your email and password.')
     } finally { setLoading(false) }
@@ -29,7 +30,8 @@ function LoginPage() {
       {error && <p className="form-error" role="alert">{error}</p>}
       <button type="submit" className="primary-button auth-submit" disabled={loading}>{loading ? 'Signing in…' : 'Sign in'}</button>
     </form>
-    <p className="auth-bottom-text">Don&apos;t have an account? <Link to="/register">Create one</Link></p>
+    <p className="auth-bottom-text"><Link to="/reset-password">Forgot password?</Link></p>
+    <p className="auth-bottom-text">Don&apos;t have an account? <Link to="/register" state={{ from: location.state?.from }}>Create one</Link></p>
   </div></section>
 }
 export default LoginPage
