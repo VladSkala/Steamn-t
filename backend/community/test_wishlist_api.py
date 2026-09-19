@@ -138,6 +138,7 @@ class WishlistAPITests(APITestCase):
             user=self.user,
             game=self.first_game,
             order=order,
+            price_at_purchase=self.first_game.price,
         )
         stale_item = GameWishlist.objects.create(
             user=self.user,

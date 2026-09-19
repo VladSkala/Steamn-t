@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from "react-router-dom";
 
 import { useAuth } from "../hooks/useAuth";
 import { useWishlist } from "../hooks/useWishlist";
+import { createReturnLocation } from "../utils/returnLocation";
 
 function HeartIcon() {
   return (
@@ -56,7 +57,7 @@ function WishlistToggleButton({
     if (isOwned) return;
 
     if (!isAuthenticated) {
-      navigate("/login", { state: { from: location } });
+      navigate("/login", { state: { from: createReturnLocation(location) } });
       return;
     }
 

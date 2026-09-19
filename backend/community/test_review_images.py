@@ -34,7 +34,12 @@ class ReviewImageAPITests(APITestCase):
         self.user = User.objects.create_user(username="review-images-user", email="review-images@example.com", password="StrongPass123!")
         self.game = Game.objects.create(title="Review Image Game", description="Owned game used for review image tests.", price="19.99", developer="Review Studio", release_date="2026-09-04")
         order = Order.objects.create(user=self.user, total_price=self.game.price, status=Order.Status.COMPLETED)
-        LibraryItem.objects.create(user=self.user, game=self.game, order=order)
+        LibraryItem.objects.create(
+            user=self.user,
+            game=self.game,
+            order=order,
+            price_at_purchase=self.game.price,
+        )
         self.url = reverse("community:game-review", kwargs={"game_id": self.game.pk})
         self.client.force_authenticate(user=self.user)
 

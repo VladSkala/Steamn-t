@@ -8,6 +8,7 @@ import {
   updateGameReview,
 } from "../api/reviews";
 import { useAuth } from "../hooks/useAuth";
+import { createReturnLocation } from "../utils/returnLocation";
 
 const REVIEW_MAX_IMAGES = 4;
 const REVIEW_MAX_IMAGE_BYTES = 5 * 1024 * 1024;
@@ -598,7 +599,7 @@ function ReviewsSection({ gameId, isOwned }) {
             <Link
               className="reviews-button reviews-button-primary"
               to="/login"
-              state={{ from: location }}
+              state={{ from: createReturnLocation(location) }}
             >
               Sign in
             </Link>

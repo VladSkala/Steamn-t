@@ -1,6 +1,6 @@
 from rest_framework import serializers
 
-from games.models import Game, GameScreenshot, Genre
+from games.models import DLC, Game, GameBundle, GameScreenshot, Genre
 
 
 class GenreSerializer(serializers.ModelSerializer):
@@ -99,4 +99,56 @@ class GameDetailSerializer(GameListSerializer):
             "review_count",
             "is_owned",
         )
+        read_only_fields = fields
+
+
+class DLCSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
+    cover = serializers.SerializerMethodField()
+    game = GameListSerializer(read_only=True)
+    is_owned = serializers.BooleanField(read_only=True, default=False)
+
+    class Meta:
+        model = DLC
+        fields = (
+            "id", "game", "title", "description", "price", "cover",
+            "hero_image_url", "release_date", "is_available", "disk_size_gb",
+            "is_owned",
+        )
+        read_only_fields = fields
+
+
+class BundleSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
+    cover = serializers.SerializerMethodField()
+    games = GameListSerializer(many=True, read_only=True)
+    dlc = DLCSerializer(many=True, read_only=True)
+    purchase_price = serializers.SerializerMethodField()
+    is_owned = serializers.SerializerMethodField()
+
+    def quote(self, bundle):
+        from decimal import Decimal
+        from store.models import LibraryItem, LibraryDLCItem
+        if not hasattr(self, "_quotes"):
+            self._quotes = {}
+        if bundle.pk in self._quotes:
+            return self._quotes[bundle.pk]
+        user = getattr(self.context.get("request"), "user", None)
+        games, dlc = list(bundle.games.all()), list(bundle.dlc.all())
+        owned_games = set(LibraryItem.objects.filter(user=user).values_list("game_id", flat=True)) if user and user.is_authenticated else set()
+        owned_dlc = set(LibraryDLCItem.objects.filter(user=user).values_list("dlc_id", flat=True)) if user and user.is_authenticated else set()
+        missing = [item for item in games if item.pk not in owned_games] + [item for item in dlc if item.pk not in owned_dlc]
+        total = sum((item.price for item in games + dlc), Decimal("0.00"))
+        subtotal = sum((item.price for item in missing), Decimal("0.00"))
+        price = min(bundle.price, (bundle.price * subtotal / total).quantize(Decimal("0.01"))) if total else Decimal("0.00")
+        self._quotes[bundle.pk] = (f"{price:.2f}", not missing)
+        return self._quotes[bundle.pk]
+
+    def get_purchase_price(self, bundle):
+        return self.quote(bundle)[0]
+
+    def get_is_owned(self, bundle):
+        return self.quote(bundle)[1]
+
+    class Meta:
+        model = GameBundle
+        fields = ("id", "title", "description", "price", "purchase_price", "is_owned", "cover", "is_available", "games", "dlc")
         read_only_fields = fields

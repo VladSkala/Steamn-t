@@ -14,7 +14,7 @@ export const getProfile = async ({ signal } = {}) => {
 
 export const updateProfile = async (updates, { signal } = {}) => {
   const hasAvatarFile =
-    typeof File !== 'undefined' && updates?.avatar instanceof File
+    typeof File !== 'undefined' && (updates?.avatar instanceof File || updates?.cover instanceof File)
 
   if (!hasAvatarFile) {
     const { data } = await api.patch('/profile/', updates, { signal })

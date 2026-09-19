@@ -1,4 +1,5 @@
 import api from "./client";
+import { OPTIONAL_AUTH_MODE } from "./authPolicy";
 
 const ensureObject = (value, name) => {
   if (!value || typeof value !== "object" || Array.isArray(value)) {
@@ -22,6 +23,7 @@ export const getGameReviews = async (
 ) => {
   const { data } = await api.get(`/games/${gameId}/reviews/`, {
     signal,
+    authMode: OPTIONAL_AUTH_MODE,
     params: { page, page_size: pageSize },
   });
 

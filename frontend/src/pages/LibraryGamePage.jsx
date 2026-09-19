@@ -12,6 +12,7 @@ import LibraryFrame from "../components/library/LibraryFrame";
 import LibraryPostCard from "../components/library/LibraryPostCard";
 import useLibrary from "../hooks/useLibrary";
 import { useLibraryGame } from "../hooks/useLibraryExperience";
+import { communityPostPath } from "../utils/communityPostLinks";
 
 function StarIcon({ filled = false }) {
   return (
@@ -472,7 +473,7 @@ function LibraryGamePage() {
               <small>Disk size</small>
               <strong>
                 {game.disk_size_gb
-                  ? `${Number(game.disk_size_gb).toLocaleString()} GB`
+                  ? `${Number(game.disk_size_gb).toLocaleString(document.documentElement.dataset.locale || "en")} GB`
                   : "Not specified"}
               </strong>
             </span>
@@ -570,7 +571,9 @@ function LibraryGamePage() {
                 post={post}
                 key={post.id}
                 onLike={likePost}
-                onComments={() => navigate(`/library/feed#post-${post.id}`)}
+                onComments={() =>
+                  navigate(communityPostPath(post.id, { comments: true }))
+                }
               />
             ))}
           </div>
@@ -590,7 +593,9 @@ function LibraryGamePage() {
                 compact
                 key={post.id}
                 onLike={likePost}
-                onComments={() => navigate(`/library/feed#post-${post.id}`)}
+                onComments={() =>
+                  navigate(communityPostPath(post.id, { comments: true }))
+                }
               />
             ))}
           </div>

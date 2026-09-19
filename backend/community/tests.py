@@ -8,6 +8,7 @@ from rest_framework.test import APITestCase
 
 from community.models import (
     CommunityPost,
+    Friendship,
     GameReview,
     GameWishlist,
     PostComment,
@@ -70,7 +71,12 @@ class LibraryCommunityAPITests(APITestCase):
             game=game,
             price_at_purchase=game.price,
         )
-        return LibraryItem.objects.create(user=user, game=game, order=order)
+        return LibraryItem.objects.create(
+            user=user,
+            game=game,
+            order=order,
+            price_at_purchase=game.price,
+        )
 
     def create_post(self, *, kind=CommunityPost.Kind.COMMUNITY, game=None, author=None):
         return CommunityPost.objects.create(
@@ -107,8 +113,21 @@ class LibraryCommunityAPITests(APITestCase):
 
     def test_library_game_is_owner_only_and_has_social_context(self):
         self.grant_game(self.friend, self.game)
-        UserFollow.objects.create(follower=self.user, following=self.friend)
-        GameWishlist.objects.create(user=self.friend, game=self.game)
+        low, high = sorted((self.user, self.friend), key=lambda user: user.pk)
+        Friendship.objects.create(
+            user_low=low,
+            user_high=high,
+            requested_by=self.user,
+            status=Friendship.Status.ACCEPTED,
+        )
+        low, high = sorted((self.user, self.other), key=lambda user: user.pk)
+        Friendship.objects.create(
+            user_low=low,
+            user_high=high,
+            requested_by=self.user,
+            status=Friendship.Status.ACCEPTED,
+        )
+        GameWishlist.objects.create(user=self.other, game=self.game)
         news = self.create_post(kind=CommunityPost.Kind.NEWS)
 
         response = self.client.get(
@@ -120,7 +139,7 @@ class LibraryCommunityAPITests(APITestCase):
         self.assertEqual(response.data["library_item"]["id"], self.item.pk)
         self.assertEqual(response.data["news"][0]["id"], news.pk)
         self.assertEqual(response.data["friends_own"][0]["id"], self.friend.pk)
-        self.assertEqual(response.data["friends_want"][0]["id"], self.friend.pk)
+        self.assertEqual(response.data["friends_want"][0]["id"], self.other.pk)
 
         forbidden = self.client.get(
             reverse("community:library-game", args=[self.unowned_game.pk]),
@@ -261,12 +280,31 @@ class LibraryCommunityAPITests(APITestCase):
         self.assertEqual(listed.status_code, status.HTTP_200_OK)
         self.assertEqual(listed.data["items"][0]["body"], "Useful post.")
 
-    def test_wishlist_endpoint_toggles_state_for_owned_game(self):
-        url = reverse("community:game-wishlist", args=[self.game.pk])
+    def test_favorite_endpoint_toggles_library_state_without_wishlist(self):
+        url = reverse("community:game-favorite", args=[self.game.pk])
         added = self.client.post(url, {}, format="json")
-        self.assertTrue(added.data["is_wishlisted"])
-        self.assertTrue(GameWishlist.objects.filter(user=self.user, game=self.game).exists())
+        self.assertTrue(added.data["is_favorite"])
+        self.item.refresh_from_db()
+        self.assertTrue(self.item.is_favorite)
+        self.assertFalse(GameWishlist.objects.filter(user=self.user, game=self.game).exists())
 
         removed = self.client.post(url, {}, format="json")
-        self.assertFalse(removed.data["is_wishlisted"])
+        self.assertFalse(removed.data["is_favorite"])
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.is_favorite)
         self.assertFalse(GameWishlist.objects.filter(user=self.user, game=self.game).exists())
+
+    def test_legacy_library_wishlist_route_redirects_without_mutation(self):
+        url = reverse("community:legacy-game-wishlist", args=[self.game.pk])
+
+        response = self.client.post(url, {}, format="json")
+
+        self.assertEqual(response.status_code, status.HTTP_308_PERMANENT_REDIRECT)
+        self.assertEqual(
+            response["Location"],
+            reverse("community:game-favorite", args=[self.game.pk]),
+        )
+        self.assertEqual(response["Deprecation"], "true")
+        self.item.refresh_from_db()
+        self.assertFalse(self.item.is_favorite)
+        self.assertFalse(GameWishlist.objects.exists())

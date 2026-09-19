@@ -15,17 +15,18 @@ import LibraryPostCard from "../components/library/LibraryPostCard";
 import StoreToolbar from "../components/StoreToolbar";
 import useModalFocus from "../hooks/useModalFocus";
 import { useLibraryHome } from "../hooks/useLibraryExperience";
+import { communityPostPath } from "../utils/communityPostLinks";
 
 const priceFormatter = new Intl.NumberFormat("en-US", {
   style: "currency",
   currency: "USD",
 });
 
-const dateFormatter = new Intl.DateTimeFormat("en-US", {
+const dateFormatter = { format: (value) => new Intl.DateTimeFormat(document.documentElement.dataset.locale || "en", {
   day: "numeric",
   month: "short",
   year: "numeric",
-});
+}).format(value) };
 
 const formatPrice = (value) => {
   const price = Number(value);
@@ -159,7 +160,7 @@ function LibraryListCard({ item, favoriteBusy, onFavorite }) {
         <span>Disk size</span>
         <strong>
           {game.disk_size_gb
-            ? `${Number(game.disk_size_gb).toLocaleString()} GB`
+            ? `${Number(game.disk_size_gb).toLocaleString(document.documentElement.dataset.locale || "en")} GB`
             : "Not specified"}
         </strong>
       </div>
@@ -720,14 +721,18 @@ function LibraryPage() {
                 linkLabel="All news"
                 posts={data.news}
                 onLike={handlePostLike}
-                onComments={(post) => navigate(`/library/feed#post-${post.id}`)}
+                onComments={(post) =>
+                  navigate(communityPostPath(post.id, { comments: true }))
+                }
               />
               <EditorialSection
                 title="Interesting from the community"
                 linkLabel="My feed"
                 posts={data.community}
                 onLike={handlePostLike}
-                onComments={(post) => navigate(`/library/feed#post-${post.id}`)}
+                onComments={(post) =>
+                  navigate(communityPostPath(post.id, { comments: true }))
+                }
               />
             </section>
           )}

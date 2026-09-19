@@ -52,7 +52,12 @@ class LibraryOrganizationAPITests(APITestCase):
             game=game,
             price_at_purchase=game.price,
         )
-        return LibraryItem.objects.create(user=user, game=game, order=order)
+        return LibraryItem.objects.create(
+            user=user,
+            game=game,
+            order=order,
+            price_at_purchase=game.price,
+        )
 
     def test_owner_can_toggle_favorite_state(self):
         response = self.client.patch(

@@ -1,4 +1,5 @@
-from django.db.models import DecimalField, OuterRef, Prefetch, Subquery
+from django.db.models import Prefetch, Q
+from rest_framework.pagination import PageNumberPagination
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.permissions import IsAuthenticated
@@ -7,14 +8,17 @@ from rest_framework.views import APIView
 
 from store.models import (
     Cart,
+    CartDLCItem,
     CartItem,
     LibraryCollection,
     LibraryItem,
     Order,
+    OrderDLCItem,
     OrderItem,
 )
 from store.serializers import (
     CartItemCreateSerializer,
+    CartDLCItemCreateSerializer,
     CartSerializer,
     LibraryCollectionSerializer,
     LibraryItemSerializer,
@@ -24,6 +28,10 @@ from store.serializers import (
 from store.services import (
     AlreadyOwnedGamesError,
     EmptyCartError,
+    OrderTotalOverflowError,
+    DLCRequirementError,
+    BundleUnavailableError,
+    checkout_bundle,
     checkout_user_cart,
 )
 
@@ -33,6 +41,9 @@ ALREADY_OWNED_MESSAGE = (
     "Remove already owned games from your cart before checkout."
 )
 CART_ALREADY_OWNED_MESSAGE = "This game is already in your library."
+ORDER_TOTAL_OVERFLOW_MESSAGE = (
+    "The cart total is too large to create an order. Remove one or more games."
+)
 
 
 def get_cart_queryset():
@@ -42,8 +53,10 @@ def get_cart_queryset():
         "created_at",
         "pk",
     )
+    dlc_items = CartDLCItem.objects.select_related("dlc").order_by("created_at", "pk")
     return Cart.objects.prefetch_related(
         Prefetch("items", queryset=cart_items),
+        Prefetch("dlc_items", queryset=dlc_items),
     )
 
 
@@ -54,43 +67,28 @@ def get_order_queryset():
         "created_at",
         "pk",
     )
+    dlc_items = OrderDLCItem.objects.select_related("dlc").order_by("created_at", "pk")
     return Order.objects.prefetch_related(
         Prefetch("items", queryset=order_items),
+        Prefetch("dlc_items", queryset=dlc_items),
+        "bundles__bundle",
     )
 
 
 def get_library_queryset(user):
-    """Return completed purchases belonging only to one authenticated user."""
+    """Return permanent game ownership belonging to one authenticated user."""
 
-    purchase_price = (
-        OrderItem.objects.filter(
-            order_id=OuterRef("order_id"),
-            game_id=OuterRef("game_id"),
-        )
-        .order_by()
-        .values("price_at_purchase")[:1]
-    )
     user_collections = LibraryCollection.objects.filter(user=user).only(
         "id",
         "user_id",
     )
     return (
-        LibraryItem.objects.filter(
-            user=user,
-            order__user=user,
-            order__status=Order.Status.COMPLETED,
-        )
+        LibraryItem.objects.filter(user=user).filter(Q(order__isnull=True) | Q(order__user=user))
         .select_related("game")
         .prefetch_related(
             Prefetch(
                 "game__library_collections",
                 queryset=user_collections,
-            ),
-        )
-        .annotate(
-            annotated_price_at_purchase=Subquery(
-                purchase_price,
-                output_field=DecimalField(max_digits=10, decimal_places=2),
             ),
         )
         .order_by("-created_at", "-pk")
@@ -138,8 +136,6 @@ class CartItemCreateView(APIView):
         if LibraryItem.objects.filter(
             user=request.user,
             game=game,
-            order__user=request.user,
-            order__status=Order.Status.COMPLETED,
         ).exists():
             return Response(
                 {
@@ -170,13 +166,41 @@ class CartItemDeleteView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+class CartDLCItemCreateView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request):
+        cart = get_or_create_user_cart(request.user)
+        serializer = CartDLCItemCreateSerializer(data=request.data, context={"cart": cart})
+        serializer.is_valid(raise_exception=True)
+        dlc = serializer.validated_data["dlc"]
+        from store.models import LibraryDLCItem
+        if LibraryDLCItem.objects.filter(user=request.user, dlc=dlc).exists():
+            return Response({"code": "already_owned", "detail": "You already own this DLC."}, status=400)
+        if not LibraryItem.objects.filter(user=request.user, game=dlc.game).exists() and not CartItem.objects.filter(cart=cart, game=dlc.game).exists():
+            return Response({"code": "base_game_required", "detail": "Add or own the base game first."}, status=400)
+        serializer.save()
+        return Response(serialize_cart(cart, request), status=201)
+
+
+class CartDLCItemDeleteView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("delete", "options")
+
+    def delete(self, request, dlc_id):
+        item = get_object_or_404(CartDLCItem, cart__user=request.user, dlc_id=dlc_id)
+        item.delete()
+        return Response(status=204)
+
+
 class CheckoutView(APIView):
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "options")
 
     def post(self, request):
         try:
-            order = checkout_user_cart(request.user)
+            order = checkout_user_cart(request.user, request.data.get("payment_method", "demo"))
         except EmptyCartError:
             return Response(
                 {"code": "empty_cart", "detail": EMPTY_CART_MESSAGE},
@@ -191,6 +215,16 @@ class CheckoutView(APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        except OrderTotalOverflowError:
+            return Response(
+                {
+                    "code": "order_total_too_large",
+                    "detail": ORDER_TOTAL_OVERFLOW_MESSAGE,
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except DLCRequirementError as error:
+            return Response({"code": "dlc_requirement", "detail": str(error)}, status=400)
 
         loaded_order = get_order_queryset().get(pk=order.pk)
         serializer = OrderSerializer(
@@ -198,6 +232,46 @@ class CheckoutView(APIView):
             context={"request": request},
         )
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class BundleCheckoutView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request, bundle_id):
+        try:
+            order = checkout_bundle(request.user, bundle_id, request.data.get("payment_method", "demo"))
+        except (BundleUnavailableError, DLCRequirementError, OrderTotalOverflowError) as error:
+            return Response({"detail": str(error)}, status=400)
+        loaded = get_order_queryset().get(pk=order.pk)
+        return Response(OrderSerializer(loaded, context={"request": request}).data, status=201)
+
+
+class OrderPagination(PageNumberPagination):
+    page_size = 10
+    page_size_query_param = "page_size"
+    max_page_size = 50
+
+
+class OrderListView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request):
+        queryset = get_order_queryset().filter(user=request.user).order_by("-created_at", "-pk")
+        paginator = OrderPagination()
+        page = paginator.paginate_queryset(queryset, request, view=self)
+        data = OrderSerializer(page, many=True, context={"request": request}).data
+        return paginator.get_paginated_response(data)
+
+
+class OrderDetailView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request, order_id):
+        order = get_object_or_404(get_order_queryset(), pk=order_id, user=request.user)
+        return Response(OrderSerializer(order, context={"request": request}).data)
 
 
 class LibraryView(APIView):
@@ -223,11 +297,9 @@ class LibraryItemUpdateView(APIView):
 
     def patch(self, request, item_id: int):
         item = get_object_or_404(
-            LibraryItem,
+            LibraryItem.objects.filter(Q(order__isnull=True) | Q(order__user=request.user)),
             pk=item_id,
             user=request.user,
-            order__user=request.user,
-            order__status=Order.Status.COMPLETED,
         )
         serializer = LibraryItemUpdateSerializer(
             item,

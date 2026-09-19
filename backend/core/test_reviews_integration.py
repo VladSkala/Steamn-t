@@ -65,7 +65,12 @@ class ReviewsIntegrationAPITests(APITestCase):
             game=self.game,
             price_at_purchase=self.game.price,
         )
-        LibraryItem.objects.create(user=user, game=self.game, order=order)
+        LibraryItem.objects.create(
+            user=user,
+            game=self.game,
+            order=order,
+            price_at_purchase=self.game.price,
+        )
 
     def authenticate(self, user):
         self.client.force_authenticate(user=user)

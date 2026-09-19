@@ -42,6 +42,7 @@ class CommunityPost(TimeStampedModel):
     title = models.CharField(max_length=240)
     body = models.TextField(blank=True)
     media_url = models.CharField(max_length=500, blank=True)
+    media_file = models.FileField(upload_to="community/%Y/%m/", blank=True, null=True)
     is_published = models.BooleanField(default=True, db_index=True)
 
     class Meta:
@@ -52,6 +53,13 @@ class CommunityPost(TimeStampedModel):
 
     def __str__(self) -> str:
         return self.title
+
+
+@receiver(post_delete, sender=CommunityPost)
+def delete_post_media_file(sender, instance, **kwargs):
+    if instance.media_file:
+        storage, name = instance.media_file.storage, instance.media_file.name
+        transaction.on_commit(lambda: storage.delete(name))
 
 
 class PostReaction(TimeStampedModel):
@@ -164,6 +172,71 @@ class UserFollow(TimeStampedModel):
                 name="prevent_self_follow",
             ),
         ]
+
+
+class Friendship(TimeStampedModel):
+    """One canonical row for a pending request or an accepted friendship."""
+
+    class Status(models.TextChoices):
+        PENDING = "pending", "Pending"
+        ACCEPTED = "accepted", "Accepted"
+
+    user_low = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="friendships_as_low",
+    )
+    user_high = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="friendships_as_high",
+    )
+    requested_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name="friend_requests_started",
+    )
+    status = models.CharField(
+        max_length=16,
+        choices=Status.choices,
+        default=Status.PENDING,
+        db_index=True,
+    )
+    responded_at = models.DateTimeField(blank=True, null=True)
+
+    class Meta:
+        ordering = ["-updated_at", "-pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user_low", "user_high"],
+                name="unique_friendship_pair",
+            ),
+            models.CheckConstraint(
+                condition=Q(user_low__lt=F("user_high")),
+                name="friendship_pair_is_ordered",
+            ),
+            models.CheckConstraint(
+                condition=Q(requested_by=F("user_low"))
+                | Q(requested_by=F("user_high")),
+                name="friendship_requester_is_participant",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["status", "-updated_at", "-id"],
+                name="friend_status_updated_idx",
+            ),
+        ]
+
+    def includes(self, user) -> bool:
+        return user.pk in (self.user_low_id, self.user_high_id)
+
+    def other_user(self, user):
+        if user.pk == self.user_low_id:
+            return self.user_high
+        if user.pk == self.user_high_id:
+            return self.user_low
+        raise ValueError("User is not part of this friendship.")
 
 
 class GameReviewImage(TimeStampedModel):

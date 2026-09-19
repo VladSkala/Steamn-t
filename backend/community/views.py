@@ -1,8 +1,10 @@
 from django.contrib.auth import get_user_model
-from django.db.models import Avg, Count, Exists, OuterRef, Q
+from django.db import transaction
+from django.db.models import Avg, BooleanField, Count, Exists, OuterRef, Q, Value
+from django.db.models.functions import Lower
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.exceptions import NotAuthenticated, PermissionDenied
 from rest_framework.generics import ListAPIView
 from rest_framework.pagination import PageNumberPagination
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -11,6 +13,7 @@ from rest_framework.views import APIView
 
 from community.models import (
     CommunityPost,
+    Friendship,
     GameReview,
     GameWishlist,
     PostComment,
@@ -19,6 +22,10 @@ from community.models import (
 )
 from community.serializers import (
     CommunityPostSerializer,
+    CommunityPostWriteSerializer,
+    FriendRequestCreateSerializer,
+    FriendSearchResultSerializer,
+    FriendshipSerializer,
     GameReviewSerializer,
     MyReviewSerializer,
     OwnedGameSerializer,
@@ -28,12 +35,20 @@ from community.serializers import (
     WishlistItemCreateSerializer,
     WishlistItemSerializer,
 )
+from community.friendship_services import (
+    accept_friend_request,
+    accepted_friend_ids,
+    cancel_friend_request,
+    reject_friend_request,
+    remove_friendship,
+    send_friend_request,
+)
 from community.review_services import (
     DUPLICATE_REVIEW_MESSAGE,
     save_review_from_request,
 )
 from games.models import Game
-from store.models import LibraryCollection, LibraryItem, Order
+from store.models import LibraryCollection, LibraryItem
 from store.serializers import LibraryCollectionSerializer
 from store.views import get_library_queryset
 
@@ -42,7 +57,16 @@ User = get_user_model()
 
 
 def get_posts_queryset(user):
-    """Return published posts with viewer-aware aggregate state."""
+    """Return published posts with safe viewer-aware aggregate state."""
+
+    viewer_has_liked = Value(False, output_field=BooleanField())
+    if user.is_authenticated:
+        viewer_has_liked = Exists(
+            PostReaction.objects.filter(
+                post_id=OuterRef("pk"),
+                user=user,
+            ),
+        )
 
     return (
         CommunityPost.objects.filter(is_published=True)
@@ -50,12 +74,7 @@ def get_posts_queryset(user):
         .annotate(
             like_count=Count("reactions", distinct=True),
             comment_count=Count("comments", distinct=True),
-            viewer_has_liked=Exists(
-                PostReaction.objects.filter(
-                    post_id=OuterRef("pk"),
-                    user=user,
-                ),
-            ),
+            viewer_has_liked=viewer_has_liked,
         )
     )
 
@@ -69,11 +88,16 @@ def serialize_posts(posts, request):
 
 
 def get_owned_game_ids(user):
-    return LibraryItem.objects.filter(
-        user=user,
-        order__user=user,
-        order__status=Order.Status.COMPLETED,
-    ).values_list("game_id", flat=True)
+    return LibraryItem.objects.filter(user=user).filter(Q(order__isnull=True) | Q(order__user=user)).values_list("game_id", flat=True)
+
+
+def get_followed_user_ids(user):
+    """Return the directional subscriptions used by the Following feed."""
+
+    return UserFollow.objects.filter(follower=user).values_list(
+        "following_id",
+        flat=True,
+    )
 
 
 def get_owned_library_item(user, game_id: int) -> LibraryItem:
@@ -200,16 +224,13 @@ class LibraryGameView(APIView):
         item = get_owned_library_item(request.user, game_id)
         game = item.game
         posts = get_posts_queryset(request.user).filter(game=game)
-        following_ids = UserFollow.objects.filter(
-            follower=request.user,
-        ).values_list("following_id", flat=True)
+        friend_ids = accepted_friend_ids(request.user)
         friends_own = User.objects.filter(
-            pk__in=following_ids,
+            pk__in=friend_ids,
             library_items__game=game,
-            library_items__order__status=Order.Status.COMPLETED,
         ).distinct()[:12]
         friends_want = User.objects.filter(
-            pk__in=following_ids,
+            pk__in=accepted_friend_ids(request.user),
             game_wishlist_items__game=game,
         ).distinct()[:12]
         review = (
@@ -234,10 +255,7 @@ class LibraryGameView(APIView):
                     if review
                     else None
                 ),
-                "is_wishlisted": GameWishlist.objects.filter(
-                    user=request.user,
-                    game=game,
-                ).exists(),
+                "is_favorite": item.is_favorite,
                 "friends_own": UserSummarySerializer(
                     friends_own,
                     many=True,
@@ -280,10 +298,7 @@ class LibraryFeedView(APIView):
         posts = get_posts_queryset(request.user)
 
         if tab == "following":
-            followed_ids = UserFollow.objects.filter(
-                follower=request.user,
-            ).values_list("following_id", flat=True)
-            posts = posts.filter(author_id__in=followed_ids)
+            posts = posts.filter(author_id__in=get_followed_user_ids(request.user))
         elif tab == "mine":
             posts = posts.filter(author=request.user)
         elif tab == "library":
@@ -327,6 +342,335 @@ class LibraryFeedView(APIView):
             )
 
         return Response({"items": serialize_posts(posts[:50], request)})
+
+
+class CommunityPostPageNumberPagination(PageNumberPagination):
+    page_size = 12
+    page_size_query_param = "page_size"
+    max_page_size = 30
+
+
+class CommunityPostFeedView(APIView):
+    """Public published feed plus authenticated, owner-bound post creation."""
+
+    http_method_names = ("get", "post", "head", "options")
+
+    def get_permissions(self):
+        classes = (IsAuthenticated,) if self.request.method == "POST" else (AllowAny,)
+        return [permission() for permission in classes]
+
+    def get(self, request, game_id=None):
+        scope = request.query_params.get("scope", "all")
+        kind = request.query_params.get("kind", "all")
+        search = request.query_params.get("search", "").strip()
+        ordering = request.query_params.get("ordering", "latest")
+        posts = get_posts_queryset(request.user)
+        requested_game = game_id or request.query_params.get("game")
+        if requested_game:
+            try:
+                requested_game = int(requested_game)
+            except (TypeError, ValueError):
+                return Response({"detail": "Invalid game id."}, status=400)
+            if not Game.objects.filter(pk=requested_game).exists():
+                raise Http404
+            posts = posts.filter(game_id=requested_game)
+
+        protected_scopes = {"friends", "following", "mine", "library"}
+        valid_scopes = {"all", *protected_scopes}
+        if scope not in valid_scopes:
+            return Response(
+                {"detail": "Unknown community scope."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if scope in protected_scopes and not request.user.is_authenticated:
+            raise NotAuthenticated("Sign in to use this community filter.")
+        if scope == "friends":
+            posts = posts.filter(author_id__in=accepted_friend_ids(request.user))
+        elif scope == "following":
+            posts = posts.filter(author_id__in=get_followed_user_ids(request.user))
+        elif scope == "mine":
+            posts = posts.filter(author=request.user)
+        elif scope == "library":
+            posts = posts.filter(game_id__in=get_owned_game_ids(request.user))
+
+        valid_kinds = {choice for choice, _label in CommunityPost.Kind.choices}
+        if kind != "all":
+            if kind not in valid_kinds:
+                return Response(
+                    {"detail": "Unknown community section."},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+            posts = posts.filter(kind=kind)
+
+        if search:
+            posts = posts.filter(
+                Q(title__icontains=search)
+                | Q(body__icontains=search)
+                | Q(game__title__icontains=search)
+                | Q(author__username__icontains=search)
+            )
+
+        if ordering == "latest":
+            posts = posts.order_by("-created_at", "-pk")
+        elif ordering == "popular":
+            posts = posts.order_by(
+                "-like_count",
+                "-comment_count",
+                "-created_at",
+                "-pk",
+            )
+        else:
+            return Response(
+                {"detail": "Unknown community ordering."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        paginator = CommunityPostPageNumberPagination()
+        page = paginator.paginate_queryset(posts, request, view=self)
+        return Response(
+            {
+                "items": serialize_posts(page, request),
+                "pagination": {
+                    "page": paginator.page.number,
+                    "page_size": paginator.get_page_size(request),
+                    "total_pages": paginator.page.paginator.num_pages,
+                    "count": paginator.page.paginator.count,
+                    "next": paginator.get_next_link(),
+                    "previous": paginator.get_previous_link(),
+                },
+            }
+        )
+
+    def post(self, request):
+        serializer = CommunityPostWriteSerializer(
+            data=request.data,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        post = serializer.save(
+            author=request.user,
+            is_published=True,
+        )
+        post = get_posts_queryset(request.user).get(pk=post.pk)
+        return Response(
+            CommunityPostSerializer(
+                post,
+                context={"request": request},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class CommunityPostDetailView(APIView):
+    """Read one public post and restrict edits/deletion to its author."""
+
+    http_method_names = ("get", "patch", "delete", "head", "options")
+
+    def get_permissions(self):
+        classes = (
+            (AllowAny,)
+            if self.request.method in ("GET", "HEAD", "OPTIONS")
+            else (IsAuthenticated,)
+        )
+        return [permission() for permission in classes]
+
+    @staticmethod
+    def get_post(request, post_id: int):
+        return get_object_or_404(get_posts_queryset(request.user), pk=post_id)
+
+    @staticmethod
+    def ensure_owner(request, post: CommunityPost) -> None:
+        if post.author_id != request.user.pk:
+            raise PermissionDenied("You can only modify your own post.")
+
+    def get(self, request, post_id: int):
+        post = self.get_post(request, post_id)
+        return Response(
+            CommunityPostSerializer(post, context={"request": request}).data
+        )
+
+    def patch(self, request, post_id: int):
+        post = self.get_post(request, post_id)
+        self.ensure_owner(request, post)
+        serializer = CommunityPostWriteSerializer(
+            post,
+            data=request.data,
+            partial=True,
+            context={"request": request},
+        )
+        serializer.is_valid(raise_exception=True)
+        old_media = post.media_file.name if post.media_file else ""
+        storage = post.media_file.storage if post.media_file else None
+        serializer.save()
+        if old_media and storage and old_media != (post.media_file.name if post.media_file else ""):
+            transaction.on_commit(lambda: storage.delete(old_media))
+        refreshed = get_posts_queryset(request.user).get(pk=post.pk)
+        return Response(
+            CommunityPostSerializer(
+                refreshed,
+                context={"request": request},
+            ).data
+        )
+
+    def delete(self, request, post_id: int):
+        post = self.get_post(request, post_id)
+        self.ensure_owner(request, post)
+        post.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FriendsOverviewView(APIView):
+    """Return accepted, incoming, and outgoing relationships for one user."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request):
+        relationships = list(
+            Friendship.objects.filter(
+                Q(user_low=request.user) | Q(user_high=request.user)
+            ).select_related("user_low", "user_high", "requested_by")
+        )
+        serialized = FriendshipSerializer(
+            relationships,
+            many=True,
+            context={"request": request, "viewer": request.user},
+        ).data
+        groups = {"friends": [], "incoming": [], "outgoing": []}
+        for item in serialized:
+            status_name = item["relationship_status"]
+            key = "friends" if status_name == "friend" else status_name
+            groups[key].append(item)
+        for items in groups.values():
+            items.sort(
+                key=lambda item: (
+                    item["user"]["username"].casefold(),
+                    item["user"]["id"],
+                )
+            )
+        friend_ids = [item["user"]["id"] for item in groups["friends"]]
+        activity = CommunityPost.objects.filter(author_id__in=friend_ids, author__privacy_activity=True, is_published=True).select_related("author", "game").order_by("-created_at", "-pk")[:10]
+        groups["activity"] = [{"id": post.pk, "title": post.title, "username": post.author.username, "user_id": post.author_id, "kind": post.kind, "game": post.game.title if post.game else None, "created_at": post.created_at} for post in activity]
+        return Response(groups)
+
+
+class FriendSearchView(APIView):
+    """Search active public identities and include viewer-relative status."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("get", "head", "options")
+
+    def get(self, request):
+        query = request.query_params.get("q", "").strip()
+        if len(query) < 2:
+            return Response({"items": []})
+        candidates = list(
+            User.objects.filter(is_active=True)
+            .exclude(pk=request.user.pk)
+            .filter(
+                Q(username__icontains=query)
+                | Q(first_name__icontains=query)
+                | Q(last_name__icontains=query)
+            )
+            .order_by(Lower("username"), "pk")[:20]
+        )
+        candidate_ids = [candidate.pk for candidate in candidates]
+        relationships = Friendship.objects.filter(
+            Q(user_low=request.user, user_high_id__in=candidate_ids)
+            | Q(user_high=request.user, user_low_id__in=candidate_ids)
+        )
+        relationship_map = {}
+        for relationship in relationships:
+            other_id = (
+                relationship.user_high_id
+                if relationship.user_low_id == request.user.pk
+                else relationship.user_low_id
+            )
+            relationship_map[other_id] = relationship
+        serializer = FriendSearchResultSerializer(
+            candidates,
+            many=True,
+            context={
+                "request": request,
+                "viewer": request.user,
+                "relationship_map": relationship_map,
+            },
+        )
+        return Response({"items": serializer.data})
+
+
+class FriendRequestCreateView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request):
+        serializer = FriendRequestCreateSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        relationship = send_friend_request(
+            sender=request.user,
+            recipient=serializer.validated_data["recipient"],
+        )
+        relationship = Friendship.objects.select_related(
+            "user_low", "user_high", "requested_by"
+        ).get(pk=relationship.pk)
+        return Response(
+            FriendshipSerializer(
+                relationship,
+                context={"request": request, "viewer": request.user},
+            ).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+
+class FriendRequestAcceptView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request, request_id: int):
+        relationship = accept_friend_request(
+            relationship_id=request_id,
+            recipient=request.user,
+        )
+        return Response(
+            FriendshipSerializer(
+                relationship,
+                context={"request": request, "viewer": request.user},
+            ).data
+        )
+
+
+class FriendRequestRejectView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request, request_id: int):
+        reject_friend_request(
+            relationship_id=request_id,
+            recipient=request.user,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FriendRequestCancelView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    def post(self, request, request_id: int):
+        cancel_friend_request(
+            relationship_id=request_id,
+            sender=request.user,
+        )
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+
+class FriendRemoveView(APIView):
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("delete", "options")
+
+    def delete(self, request, user_id: int):
+        other_user = get_object_or_404(User, pk=user_id, is_active=True)
+        remove_friendship(user=request.user, other_user=other_user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
 
 
 class ReviewPageNumberPagination(PageNumberPagination):
@@ -537,48 +881,78 @@ class GameReviewView(APIView):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class GameWishlistToggleView(APIView):
+class GameFavoriteToggleView(APIView):
+    """Toggle library-only favorite state without mutating Wishlist."""
+
+    permission_classes = (IsAuthenticated,)
+    http_method_names = ("post", "options")
+
+    @transaction.atomic
+    def post(self, request, game_id: int):
+        item = get_object_or_404(
+            LibraryItem.objects.select_for_update(),
+            user=request.user,
+            game_id=game_id,
+        )
+        item.is_favorite = not item.is_favorite
+        item.save(update_fields=("is_favorite", "updated_at"))
+        return Response({"is_favorite": item.is_favorite})
+
+
+class LegacyGameWishlistToggleView(APIView):
+    """Redirect legacy clients to the canonical favorite action."""
+
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "options")
 
     def post(self, request, game_id: int):
-        item = get_owned_library_item(request.user, game_id)
-        wishlist_item, created = GameWishlist.objects.get_or_create(
-            user=request.user,
-            game=item.game,
-        )
-        if not created:
-            wishlist_item.delete()
-        return Response({"is_wishlisted": created})
+        get_owned_library_item(request.user, game_id)
+        successor = f"/api/library/games/{game_id}/favorite/"
+        response = Response(status=status.HTTP_308_PERMANENT_REDIRECT)
+        response["Location"] = successor
+        response["Deprecation"] = "true"
+        response["Link"] = f'<{successor}>; rel="successor-version"'
+        return response
 
 
 class PostReactionToggleView(APIView):
     permission_classes = (IsAuthenticated,)
     http_method_names = ("post", "options")
 
+    @transaction.atomic
     def post(self, request, post_id: int):
         post = get_object_or_404(
-            CommunityPost,
+            CommunityPost.objects.select_for_update(),
             pk=post_id,
             is_published=True,
         )
-        reaction, created = PostReaction.objects.get_or_create(
+        from users.social_services import has_block_between
+        if has_block_between(request.user, post.author):
+            return Response({"detail": "This interaction is unavailable."}, status=403)
+        reaction = PostReaction.objects.filter(
             post=post,
             user=request.user,
-        )
-        if not created:
+        ).first()
+        if reaction:
             reaction.delete()
+            is_liked = False
+        else:
+            PostReaction.objects.create(post=post, user=request.user)
+            is_liked = True
         return Response(
             {
-                "is_liked": created,
+                "is_liked": is_liked,
                 "like_count": post.reactions.count(),
             },
         )
 
 
 class PostCommentListCreateView(APIView):
-    permission_classes = (IsAuthenticated,)
     http_method_names = ("get", "post", "head", "options")
+
+    def get_permissions(self):
+        classes = (IsAuthenticated,) if self.request.method == "POST" else (AllowAny,)
+        return [permission() for permission in classes]
 
     def get_post(self, post_id: int):
         return get_object_or_404(
@@ -600,6 +974,9 @@ class PostCommentListCreateView(APIView):
 
     def post(self, request, post_id: int):
         post = self.get_post(post_id)
+        from users.social_services import has_block_between
+        if has_block_between(request.user, post.author):
+            return Response({"detail": "This interaction is unavailable."}, status=403)
         serializer = PostCommentSerializer(
             data=request.data,
             context={"request": request},
@@ -607,3 +984,19 @@ class PostCommentListCreateView(APIView):
         serializer.is_valid(raise_exception=True)
         serializer.save(post=post, author=request.user)
         return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+
+class PostCommentDetailView(APIView):
+    permission_classes = (IsAuthenticated,)
+
+    def patch(self, request, post_id, comment_id):
+        comment = get_object_or_404(PostComment, pk=comment_id, post_id=post_id, author=request.user, post__is_published=True)
+        serializer = PostCommentSerializer(comment, data=request.data, partial=True, context={"request": request})
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def delete(self, request, post_id, comment_id):
+        comment = get_object_or_404(PostComment, pk=comment_id, post_id=post_id, author=request.user)
+        comment.delete()
+        return Response(status=204)

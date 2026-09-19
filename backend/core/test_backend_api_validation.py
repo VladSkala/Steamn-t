@@ -54,7 +54,12 @@ def grant_purchase(user, game: Game, *, order_user=None):
         game=game,
         price_at_purchase=game.price,
     )
-    item = LibraryItem.objects.create(user=user, game=game, order=order)
+    item = LibraryItem.objects.create(
+        user=user,
+        game=game,
+        order=order,
+        price_at_purchase=game.price,
+    )
     return order, item
 
 

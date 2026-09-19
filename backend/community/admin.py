@@ -2,6 +2,7 @@ from django.contrib import admin
 
 from community.models import (
     CommunityPost,
+    Friendship,
     GameReview,
     GameReviewImage,
     GameWishlist,
@@ -31,6 +32,7 @@ class GameReviewAdmin(admin.ModelAdmin):
 
 
 admin.site.register(CommunityPost)
+admin.site.register(Friendship)
 admin.site.register(PostReaction)
 admin.site.register(PostComment)
 admin.site.register(UserFollow)

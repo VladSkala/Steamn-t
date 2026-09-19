@@ -112,3 +112,87 @@ class GameScreenshot(models.Model):
 
     def __str__(self):
         return self.caption or f"{self.game.title} — image {self.position + 1}"
+
+
+class DLC(TimeStampedModel):
+    """An optional digital add-on tied to one base game."""
+
+    game = models.ForeignKey(Game, on_delete=models.CASCADE, related_name="dlc")
+    title = models.CharField(max_length=255)
+    description = models.TextField()
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    cover = models.ImageField(
+        upload_to="games/dlc/%Y/%m/",
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(["jpg", "jpeg", "png", "webp"]),
+            validate_image_size,
+        ],
+    )
+    hero_image_url = models.URLField(max_length=500, blank=True)
+    release_date = models.DateField()
+    is_available = models.BooleanField(default=True, db_index=True)
+    disk_size_gb = models.DecimalField(
+        max_digits=8,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+
+    class Meta:
+        ordering = ["title", "pk"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["game", "title"],
+                name="unique_dlc_title_per_game",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(price__gte=0),
+                name="dlc_price_non_negative",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.game.title}: {self.title}"
+
+
+class GameBundle(TimeStampedModel):
+    """A curated set of games and add-ons with one fixed demo price."""
+
+    title = models.CharField(max_length=255, unique=True)
+    description = models.TextField()
+    price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        validators=[MinValueValidator(Decimal("0.00"))],
+    )
+    cover = models.ImageField(
+        upload_to="games/bundles/%Y/%m/",
+        blank=True,
+        null=True,
+        validators=[
+            FileExtensionValidator(["jpg", "jpeg", "png", "webp"]),
+            validate_image_size,
+        ],
+    )
+    games = models.ManyToManyField(Game, related_name="bundles", blank=True)
+    dlc = models.ManyToManyField(DLC, related_name="bundles", blank=True)
+    is_available = models.BooleanField(default=True, db_index=True)
+
+    class Meta:
+        ordering = ["title", "pk"]
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(price__gte=0),
+                name="bundle_price_non_negative",
+            ),
+        ]
+
+    def __str__(self):
+        return self.title

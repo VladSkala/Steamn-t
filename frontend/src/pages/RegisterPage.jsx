@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { resolveReturnLocation } from '../utils/returnLocation'
 
 function RegisterPage() {
   const { register } = useAuth()
   const navigate = useNavigate()
+  const location = useLocation()
   const [form, setForm] = useState({ username: '', email: '', password: '', password_confirm: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -15,7 +17,7 @@ function RegisterPage() {
     if (form.password !== form.password_confirm) { setError('Passwords do not match.'); return }
     setLoading(true)
     try {
-      await register(form); navigate('/profile', { replace: true })
+      await register(form); navigate(resolveReturnLocation(location.state?.from), { replace: true })
     } catch (err) {
       const data = err.response?.data
       setError(data ? (Object.values(data).flat()[0] || 'Unable to create your account.') : 'Unable to create your account.')
@@ -32,8 +34,9 @@ function RegisterPage() {
       <label><span>Confirm password</span><input name="password_confirm" type="password" placeholder="Repeat your password" value={form.password_confirm} onChange={change} autoComplete="new-password" required /></label>
       {error && <p className="form-error" role="alert">{error}</p>}
       <button type="submit" className="primary-button auth-submit" disabled={loading}>{loading ? 'Creating account…' : 'Create account'}</button>
+      <p className="auth-legal">By creating an account, you agree to the <Link to="/legal/terms">Terms of Use</Link> and acknowledge the <Link to="/legal/privacy">Privacy Policy</Link>.</p>
     </form>
-    <p className="auth-bottom-text">Already have an account? <Link to="/login">Log in</Link></p>
+    <p className="auth-bottom-text">Already have an account? <Link to="/login" state={{ from: location.state?.from }}>Log in</Link></p>
   </div></section>
 }
 export default RegisterPage

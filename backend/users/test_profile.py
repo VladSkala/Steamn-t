@@ -12,7 +12,13 @@ from PIL import Image
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from community.models import CommunityPost, GameReview, GameWishlist, UserFollow
+from community.models import (
+    CommunityPost,
+    Friendship,
+    GameReview,
+    GameWishlist,
+    UserFollow,
+)
 from games.models import Game
 from store.models import LibraryItem, Order, OrderItem
 
@@ -68,6 +74,7 @@ class CurrentUserProfileContractTests(APITestCase):
             user=user,
             game=game,
             order=order,
+            price_at_purchase=game.price,
             is_favorite=is_favorite,
         )
 
@@ -121,6 +128,13 @@ class CurrentUserProfileContractTests(APITestCase):
         UserFollow.objects.create(follower=self.user, following=friend)
         UserFollow.objects.create(follower=self.other_user, following=self.user)
         UserFollow.objects.create(follower=friend, following=self.user)
+        low, high = sorted((self.user, friend), key=lambda user: user.pk)
+        Friendship.objects.create(
+            user_low=low,
+            user_high=high,
+            requested_by=self.user,
+            status=Friendship.Status.ACCEPTED,
+        )
 
         self.authenticate()
         response = self.client.get(self.profile_url)
@@ -136,6 +150,7 @@ class CurrentUserProfileContractTests(APITestCase):
                 "wishlist_games": 1,
                 "reviews": 1,
                 "posts": 1,
+                "friends": 1,
                 "followers": 2,
                 "following": 1,
             },

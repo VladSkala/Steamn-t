@@ -36,6 +36,7 @@ class CartOwnershipAPITests(APITestCase):
             user=self.user,
             game=self.game,
             order=order,
+            price_at_purchase=self.game.price,
         )
         self.client.force_authenticate(user=self.user)
 

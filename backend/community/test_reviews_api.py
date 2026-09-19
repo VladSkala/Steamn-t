@@ -62,7 +62,12 @@ class PublicReviewsAPITests(APITestCase):
             status=Order.Status.COMPLETED,
         )
         OrderItem.objects.create(order=order, game=game, price_at_purchase=game.price)
-        return LibraryItem.objects.create(user=user, game=game, order=order)
+        return LibraryItem.objects.create(
+            user=user,
+            game=game,
+            order=order,
+            price_at_purchase=game.price,
+        )
 
     def detail_url(self, review):
         return reverse(
