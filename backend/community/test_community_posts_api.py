@@ -83,6 +83,19 @@ class CommunityPostsApiTests(APITestCase):
         self.client.force_authenticate(user=None)
         self.assertEqual(self.client.get(f"/api/library/posts/{self.post.pk}/comments/").data["items"][0]["body"], "Stored comment")
 
+    def test_comment_list_is_paginated_without_changing_the_items_contract(self):
+        PostComment.objects.bulk_create([
+            PostComment(post=self.post, author=self.other, body=f"Comment {index}")
+            for index in range(55)
+        ])
+
+        response = self.client.get(f"/api/library/posts/{self.post.pk}/comments/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 55)
+        self.assertEqual(len(response.data["items"]), 50)
+        self.assertIsNotNone(response.data["next"])
+
     def test_list_ordering_and_filters_are_deterministic(self):
         newer = CommunityPost.objects.create(author=self.other, kind=CommunityPost.Kind.GUIDE, title="Newest", body="Guide")
         CommunityPost.objects.filter(pk=newer.pk).update(created_at=timezone.now())
@@ -90,6 +103,17 @@ class CommunityPostsApiTests(APITestCase):
         self.assertEqual([item["id"] for item in response.data["items"]][:2], [newer.pk, self.post.pk])
         filtered = self.client.get("/api/community/posts/?kind=guide&search=Newest")
         self.assertEqual([item["id"] for item in filtered.data["items"]], [newer.pk])
+
+    def test_list_returns_404_for_unknown_numeric_game_filter(self):
+        response = self.client.get("/api/community/posts/?game=999999")
+
+        self.assertEqual(response.status_code, 404)
+
+    def test_list_rejects_non_numeric_game_filter(self):
+        response = self.client.get("/api/community/posts/?game=not-a-game")
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data["detail"], "Invalid game id.")
 
     def test_protected_scopes_require_authentication(self):
         for scope in ("friends", "mine", "library"):

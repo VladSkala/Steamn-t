@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.db.models import Avg, BooleanField, Count, Exists, OuterRef, Q, Value
 from django.db.models.functions import Lower
+from django.http import Http404
 from django.shortcuts import get_object_or_404
 from rest_framework import serializers, status
 from rest_framework.exceptions import NotAuthenticated, PermissionDenied
@@ -348,6 +349,12 @@ class CommunityPostPageNumberPagination(PageNumberPagination):
     page_size = 12
     page_size_query_param = "page_size"
     max_page_size = 30
+
+
+class PostCommentPageNumberPagination(PageNumberPagination):
+    page_size = 50
+    page_size_query_param = "page_size"
+    max_page_size = 100
 
 
 class CommunityPostFeedView(APIView):
@@ -965,12 +972,19 @@ class PostCommentListCreateView(APIView):
         comments = PostComment.objects.filter(
             post=self.get_post(post_id),
         ).select_related("author")
+        paginator = PostCommentPageNumberPagination()
+        page = paginator.paginate_queryset(comments, request, view=self)
         serializer = PostCommentSerializer(
-            comments,
+            page,
             many=True,
             context={"request": request},
         )
-        return Response({"items": serializer.data})
+        return Response({
+            "count": paginator.page.paginator.count,
+            "next": paginator.get_next_link(),
+            "previous": paginator.get_previous_link(),
+            "items": serializer.data,
+        })
 
     def post(self, request, post_id: int):
         post = self.get_post(post_id)

@@ -2,6 +2,7 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from django.core.exceptions import ValidationError as DjangoValidationError
 from django.db import IntegrityError, transaction
+from django.db.models import Count, F, Q
 from rest_framework import serializers
 from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
 from rest_framework_simplejwt.serializers import TokenRefreshSerializer
@@ -9,6 +10,40 @@ from rest_framework_simplejwt.exceptions import InvalidToken
 
 
 User = get_user_model()
+
+
+def with_profile_stats(queryset):
+    """Annotate the summary fields required by CurrentUserProfileSerializer."""
+
+    return queryset.annotate(
+        library_games_count=Count("library_items", distinct=True),
+        favorite_games_count=Count(
+            "library_items",
+            filter=Q(library_items__is_favorite=True),
+            distinct=True,
+        ),
+        wishlist_games_count=Count("game_wishlist_items", distinct=True),
+        reviews_count=Count("game_reviews", distinct=True),
+        posts_count=Count(
+            "community_posts",
+            filter=Q(community_posts__is_published=True),
+            distinct=True,
+        ),
+        followers_count=Count("follower_links", distinct=True),
+        following_count=Count("following_links", distinct=True),
+        friendships_low_count=Count(
+            "friendships_as_low",
+            filter=Q(friendships_as_low__status="accepted"),
+            distinct=True,
+        ),
+        friendships_high_count=Count(
+            "friendships_as_high",
+            filter=Q(friendships_as_high__status="accepted"),
+            distinct=True,
+        ),
+    ).annotate(
+        friends_count=F("friendships_low_count") + F("friendships_high_count"),
+    )
 
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -68,6 +103,7 @@ class CurrentUserProfileSerializer(ProfileSerializer):
 
     display_name = serializers.SerializerMethodField()
     stats = serializers.SerializerMethodField()
+    wallet_balance = serializers.SerializerMethodField()
 
     class Meta(ProfileSerializer.Meta):
         fields = (
@@ -89,11 +125,13 @@ class CurrentUserProfileSerializer(ProfileSerializer):
             "privacy_messages",
             "show_online",
             "notification_preferences",
+            "wallet_balance",
             "created_at",
             "stats",
         )
         read_only_fields = ProfileSerializer.Meta.read_only_fields + (
             "display_name",
+            "wallet_balance",
             "stats",
         )
 
@@ -106,6 +144,11 @@ class CurrentUserProfileSerializer(ProfileSerializer):
 
     def get_display_name(self, user):
         return user.get_full_name().strip() or user.username
+
+    def get_wallet_balance(self, user):
+        from users.wallet_services import wallet_balance
+
+        return f"{wallet_balance(user):.2f}"
 
     def get_stats(self, user):
         return {
@@ -207,7 +250,11 @@ class LoginSerializer(TokenObtainPairSerializer):
     def validate(self, attrs):
         attrs["email"] = attrs["email"].strip().lower()
         data = super().validate(attrs)
-        data["user"] = ProfileSerializer(self.user, context=self.context).data
+        profile = with_profile_stats(User.objects.filter(pk=self.user.pk)).get()
+        data["user"] = CurrentUserProfileSerializer(
+            profile,
+            context=self.context,
+        ).data
         return data
 
 

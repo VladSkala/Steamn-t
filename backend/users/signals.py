@@ -1,4 +1,5 @@
 from django.db.models.signals import post_save, pre_save, post_delete
+from django.db.models import Q
 from django.dispatch import receiver
 from decimal import Decimal
 
@@ -13,6 +14,30 @@ from community.models import CommunityPost
 def notify(user, key, title, body, path):
     if user.notification_preferences.get(key, True):
         Notification.objects.create(user=user, kind=key, title=title, body=body[:300], target_path=path)
+
+
+def bulk_notify(users, key_for_user, title, body, path):
+    """Create a large notification fan-out in bounded database batches."""
+
+    batch = []
+    for user in users.iterator(chunk_size=500):
+        key = key_for_user(user)
+        if not user.notification_preferences.get(key, True):
+            continue
+        batch.append(
+            Notification(
+                user=user,
+                kind=key,
+                title=title,
+                body=body[:300],
+                target_path=path,
+            )
+        )
+        if len(batch) == 500:
+            Notification.objects.bulk_create(batch, batch_size=500)
+            batch.clear()
+    if batch:
+        Notification.objects.bulk_create(batch, batch_size=500)
 
 
 @receiver(post_save, sender=Message)
@@ -63,6 +88,49 @@ def remove_profile_files(sender, instance, **kwargs):
             transaction.on_commit(lambda storage=field.storage, name=field.name: storage.delete(name))
 
 
+@receiver(pre_save, sender=User)
+def previous_profile_files(sender, instance, **kwargs):
+    update_fields = kwargs.get("update_fields")
+    if update_fields is not None and not {"avatar", "cover"}.intersection(update_fields):
+        instance._previous_profile_files = ()
+        return
+    if not instance.pk:
+        instance._previous_profile_files = ()
+        return
+    previous = User.objects.filter(pk=instance.pk).only("avatar", "cover").first()
+    if previous is None:
+        instance._previous_profile_files = ()
+        return
+    instance._previous_profile_files = tuple(
+        (field.storage, field.name)
+        for field in (previous.avatar, previous.cover)
+        if field
+    )
+
+
+def delete_unreferenced_profile_file(storage, name, user_id):
+    still_used = User.objects.exclude(pk=user_id).filter(
+        Q(avatar=name) | Q(cover=name)
+    ).exists()
+    if not still_used:
+        storage.delete(name)
+
+
+@receiver(post_save, sender=User)
+def remove_replaced_profile_files(sender, instance, **kwargs):
+    current_names = {
+        field.name
+        for field in (instance.avatar, instance.cover)
+        if field
+    }
+    for storage, name in getattr(instance, "_previous_profile_files", ()):
+        if name and name not in current_names:
+            transaction.on_commit(
+                lambda storage=storage, name=name, user_id=instance.pk:
+                delete_unreferenced_profile_file(storage, name, user_id)
+            )
+
+
 @receiver(post_delete, sender=Message)
 def remove_message_file(sender, instance, **kwargs):
     if instance.attachment:
@@ -85,9 +153,13 @@ def price_drop_notifications(sender, instance, created, **kwargs):
     if created or previous is None or price >= previous:
         return
     wished = set(instance.wishlist_items.values_list("user_id", flat=True))
-    for user in User.objects.filter(is_active=True).iterator(chunk_size=500):
-        key = "wishlist_sale" if user.pk in wished else "store_sale"
-        notify(user, key, f"Price drop: {instance.title}"[:160], f"Now ${price:.2f} (previously ${previous:.2f}).", f"/games/{instance.pk}")
+    bulk_notify(
+        User.objects.filter(is_active=True),
+        lambda user: "wishlist_sale" if user.pk in wished else "store_sale",
+        f"Price drop: {instance.title}"[:160],
+        f"Now ${price:.2f} (previously ${previous:.2f}).",
+        f"/games/{instance.pk}",
+    )
 
 
 @receiver(pre_save, sender=CommunityPost)
@@ -102,5 +174,10 @@ def news_notifications(sender, instance, created, **kwargs):
     recipients = User.objects.filter(is_active=True).exclude(pk=instance.author_id)
     if instance.game_id:
         recipients = recipients.filter(library_items__game_id=instance.game_id).distinct()
-    for user in recipients.iterator(chunk_size=500):
-        notify(user, "news", instance.title[:160], instance.body, f"/community/posts/{instance.pk}")
+    bulk_notify(
+        recipients,
+        lambda user: "news",
+        instance.title[:160],
+        instance.body,
+        f"/community/posts/{instance.pk}",
+    )

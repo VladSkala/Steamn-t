@@ -26,13 +26,14 @@ function ViewModeToggle({
   disabled = false,
   label = "items",
 }) {
+  useLocale();
   const nextView = view === "grid" ? "list" : "grid";
 
   return (
     <button
       type="button"
       className={`view-mode-toggle is-${view}`}
-      aria-label={`Switch ${label} to ${nextView} view`}
+      aria-label={t("Switch {label} to {view} view", { label, view: t(nextView) })}
       aria-pressed={view === "list"}
       disabled={disabled}
       onClick={() => onToggle(nextView)}
@@ -48,3 +49,4 @@ function ViewModeToggle({
 }
 
 export default ViewModeToggle;
+import { t, useLocale } from "../i18n/index.js";

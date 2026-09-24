@@ -5,7 +5,7 @@ function AuthLayout() {
     <div className="auth-layout">
       <div className="auth-layout-inner">
         <Link to="/" className="auth-brand">
-          Steamn&apos;t
+          Steam<span>n</span>’t
         </Link>
 
         <Outlet />

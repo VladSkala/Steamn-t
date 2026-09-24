@@ -49,6 +49,13 @@ class ReviewImageAPITests(APITestCase):
         self.assertEqual(len(response.data["images"]), 2)
         self.assertEqual([image["position"] for image in response.data["images"]], [0, 1])
 
+    def test_public_profile_review_content_includes_lightbox_images(self):
+        review = GameReview.objects.create(user=self.user, game=self.game, rating=5, body="Public review with a screenshot.")
+        image = GameReviewImage.objects.create(review=review, image=image_upload("public-review.png"), position=0)
+        response = self.client.get(f"/api/users/{self.user.pk}/content/", {"section": "reviews"})
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["results"][0]["images"], [{"id": image.pk, "image": image.image.url}])
+
     def test_update_replaces_unkept_image(self):
         review = GameReview.objects.create(user=self.user, game=self.game, rating=4, body="Original review body.")
         kept = GameReviewImage.objects.create(review=review, image=image_upload("keep.png"), position=0)

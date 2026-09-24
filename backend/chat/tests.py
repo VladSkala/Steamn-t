@@ -31,6 +31,32 @@ class ChatJourneyTests(TestCase):
         self.client.force_authenticate(self.stranger)
         self.assertEqual(self.client.get(f"/api/chat/conversations/{conversation_id}/messages/").status_code, 404)
 
+    def test_conversation_overview_has_a_bounded_query_count(self):
+        User = get_user_model()
+        for index in range(5):
+            other = User.objects.create_user(
+                username=f"chat_query_{index}",
+                email=f"chat_query_{index}@example.test",
+                password="StrongPass123!",
+            )
+            conversation = Conversation.objects.create(
+                user_low=min((self.alice, other), key=lambda user: user.pk),
+                user_high=max((self.alice, other), key=lambda user: user.pk),
+            )
+            Message.objects.create(
+                conversation=conversation,
+                sender=other,
+                body=f"Message {index}",
+            )
+
+        with self.assertNumQueries(3):
+            response = self.client.get("/api/chat/conversations/")
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.data["count"], 5)
+        self.assertEqual(len(response.data["items"]), 5)
+        self.assertTrue(all(item["unread_count"] == 1 for item in response.data["items"]))
+
     def test_blocked_and_empty_messages_are_rejected(self):
         conversation = Conversation.objects.create(user_low=min((self.alice, self.bob), key=lambda u: u.pk), user_high=max((self.alice, self.bob), key=lambda u: u.pk))
         self.assertEqual(self.client.post(f"/api/chat/conversations/{conversation.pk}/messages/", {"body": " "}, format="json").status_code, 400)
@@ -52,6 +78,29 @@ class ChatJourneyTests(TestCase):
         self.bob.privacy_messages = "nobody"
         self.bob.save(update_fields=("privacy_messages",))
         self.assertEqual(self.client.post(f"/api/chat/conversations/{conversation.pk}/messages/", {"body": "Blocked by privacy"}).status_code, 403)
+
+    def test_unblock_immediately_restores_messaging_when_privacy_allows_it(self):
+        conversation = Conversation.objects.create(user_low=self.alice, user_high=self.bob)
+        self.assertEqual(self.client.post(f"/api/users/{self.bob.pk}/block/").status_code, 200)
+        blocked = self.client.get(f"/api/chat/conversations/{conversation.pk}/")
+        self.assertFalse(blocked.data["can_message"])
+        self.assertEqual(blocked.data["message_unavailable_reason"], "blocked")
+
+        self.assertEqual(self.client.delete(f"/api/users/{self.bob.pk}/block/").status_code, 200)
+        unblocked = self.client.get(f"/api/chat/conversations/{conversation.pk}/")
+        self.assertTrue(unblocked.data["can_message"])
+        self.assertIsNone(unblocked.data["message_unavailable_reason"])
+        self.assertEqual(self.client.post(f"/api/chat/conversations/{conversation.pk}/messages/", {"body": "Available again"}).status_code, 201)
+
+    def test_conversation_explains_friends_only_privacy(self):
+        conversation = Conversation.objects.create(user_low=self.alice, user_high=self.bob)
+        self.bob.privacy_messages = "friends"
+        self.bob.save(update_fields=("privacy_messages",))
+
+        detail = self.client.get(f"/api/chat/conversations/{conversation.pk}/")
+
+        self.assertFalse(detail.data["can_message"])
+        self.assertEqual(detail.data["message_unavailable_reason"], "friends_only")
 
     def test_mute_clear_and_report_are_participant_scoped(self):
         conversation = Conversation.objects.create(user_low=self.alice, user_high=self.bob)

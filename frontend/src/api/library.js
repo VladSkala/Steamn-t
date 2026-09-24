@@ -97,23 +97,21 @@ export const deleteGameReview = async (gameId) => {
   await api.delete(`/library/games/${gameId}/review/`);
 };
 
-export const toggleLibraryFavorite = async (gameId) => {
-  const { data } = await api.post(`/library/games/${gameId}/favorite/`, {});
-  return ensureObject(data, "favorite state");
-};
-
 export const togglePostReaction = async (postId) => {
   const { data } = await api.post(`/library/posts/${postId}/reaction/`, {});
   return ensureObject(data, "reaction state");
 };
 
-export const getPostComments = async (postId, { signal } = {}) => {
-  const { data } = await api.get(`/library/posts/${postId}/comments/`, {
+export const getPostComments = async (postId, { signal, url } = {}) => {
+  const { data } = await api.get(url || `/library/posts/${postId}/comments/`, {
     signal,
     authMode: OPTIONAL_AUTH_MODE,
   });
   ensureObject(data, "comments payload");
-  return ensureArray(data.items, "comments");
+  return {
+    items: ensureArray(data.items, "comments"),
+    next: data.next || null,
+  };
 };
 
 export const createPostComment = async (postId, body) => {

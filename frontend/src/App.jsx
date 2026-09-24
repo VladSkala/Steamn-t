@@ -1,6 +1,6 @@
+import { t, useLocale } from "./i18n/index.js";
 import { lazy, Suspense } from "react";
 import { Route, Routes } from "react-router-dom";
-
 import ProtectedRoute from "./components/ProtectedRoute";
 import AuthLayout from "./layouts/AuthLayout";
 import GlobalLayout from "./layouts/GlobalLayout";
@@ -30,12 +30,10 @@ const PublicProfilePage = lazy(() => import("./pages/PublicProfilePage"));
 const RegisterPage = lazy(() => import("./pages/RegisterPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsCompletePage"));
 const WishlistPage = lazy(() => import("./pages/WishlistPage"));
-
-const protectedPage = (page) => <ProtectedRoute>{page}</ProtectedRoute>;
-
+const protectedPage = page => <ProtectedRoute>{page}</ProtectedRoute>;
 function App() {
-  return (
-    <Suspense fallback={<div className="chat-empty" role="status">Loading page…</div>}><Routes>
+  useLocale();
+  return <Suspense fallback={<div className="chat-empty" role="status">{t("Loading page…")}</div>}><Routes>
       <Route element={<GlobalLayout />}>
         <Route index element={<HomePage />} />
         <Route path="catalog" element={<CatalogPage />} />
@@ -49,14 +47,8 @@ function App() {
         <Route path="cart" element={protectedPage(<CartPage />)} />
         <Route path="checkout" element={protectedPage(<CheckoutPage />)} />
         <Route path="library" element={protectedPage(<LibraryPage />)} />
-        <Route
-          path="library/games/:gameId"
-          element={protectedPage(<LibraryGamePage />)}
-        />
-        <Route
-          path="library/feed"
-          element={protectedPage(<LibraryFeedPage />)}
-        />
+        <Route path="library/games/:gameId" element={protectedPage(<LibraryGamePage />)} />
+        <Route path="library/feed" element={protectedPage(<LibraryFeedPage />)} />
         <Route path="games/:gameId" element={<GameDetailsPage />} />
         <Route path="games/:gameId/dlc" element={<DLCListPage />} />
         <Route path="dlc/:dlcId" element={<DLCDetailPage />} />
@@ -66,10 +58,7 @@ function App() {
         <Route path="orders/:orderId" element={protectedPage(<OrderDetailPage />)} />
         <Route path="profile" element={protectedPage(<ProfilePage />)} />
         <Route path="users/:userId" element={<PublicProfilePage />} />
-        <Route
-          path="profile/reviews"
-          element={protectedPage(<MyReviewsPage />)}
-        />
+        <Route path="profile/reviews" element={protectedPage(<MyReviewsPage />)} />
         <Route path="settings" element={protectedPage(<SettingsPage />)} />
         <Route path="wishlist" element={protectedPage(<WishlistPage />)} />
         <Route path="404" element={<NotFoundPage />} />
@@ -80,8 +69,6 @@ function App() {
         <Route path="reset-password" element={<PasswordResetPage />} />
         <Route path="register" element={<RegisterPage />} />
       </Route>
-    </Routes></Suspense>
-  );
+    </Routes></Suspense>;
 }
-
 export default App;

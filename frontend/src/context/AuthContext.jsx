@@ -9,6 +9,7 @@ import api, {
   storeTokens,
 } from '../api/client'
 import { AuthContext } from './AuthContextValue'
+import { syncProfileLocale } from '../i18n'
 
 const hasStoredSession = () =>
   Boolean(getAccessToken() || getRefreshToken())
@@ -19,9 +20,8 @@ export function AuthProvider({ children }) {
 
   useEffect(() => {
     document.documentElement.dataset.theme = user?.dark_theme === false ? 'light' : 'dark'
-    document.documentElement.lang = 'en'
-    document.documentElement.dataset.locale = user?.language || 'en'
-  }, [user?.dark_theme, user?.language])
+  }, [user?.dark_theme])
+  useEffect(() => { syncProfileLocale(user) }, [user])
 
   const logout = useCallback(() => {
     clearTokens()

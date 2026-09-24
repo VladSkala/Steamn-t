@@ -1,20 +1,21 @@
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Count, F, Q
+from django.db.models import Q
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
 from rest_framework import generics, status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
+from rest_framework.throttling import AnonRateThrottle
 from rest_framework_simplejwt.views import TokenObtainPairView, TokenRefreshView
 
 from .serializers import (
     CurrentUserProfileSerializer,
     LoginSerializer,
-    ProfileSerializer,
     RegistrationSerializer,
     VersionedTokenRefreshSerializer,
+    with_profile_stats,
 )
 from community.models import CommunityPost, Friendship, UserFollow
 from store.models import LibraryItem
@@ -30,12 +31,23 @@ from uuid import uuid4
 User = get_user_model()
 
 
+class RegistrationThrottle(AnonRateThrottle):
+    scope = "registration"
+    rate = "10/hour"
+
+
+class LoginThrottle(AnonRateThrottle):
+    scope = "login"
+    rate = "20/minute"
+
+
 class RegisterView(generics.CreateAPIView):
     """Create an account and immediately issue an access/refresh token pair."""
 
     serializer_class = RegistrationSerializer
     authentication_classes = ()
     permission_classes = (AllowAny,)
+    throttle_classes = (RegistrationThrottle,)
 
     @transaction.atomic
     def create(self, request, *args, **kwargs):
@@ -44,7 +56,11 @@ class RegisterView(generics.CreateAPIView):
         user = serializer.save()
 
         refresh = LoginSerializer.get_token(user)
-        profile = ProfileSerializer(user, context={"request": request})
+        profile_user = with_profile_stats(User.objects.filter(pk=user.pk)).get()
+        profile = CurrentUserProfileSerializer(
+            profile_user,
+            context={"request": request},
+        )
 
         return Response(
             {
@@ -62,6 +78,7 @@ class LoginView(TokenObtainPairView):
     serializer_class = LoginSerializer
     authentication_classes = ()
     permission_classes = (AllowAny,)
+    throttle_classes = (LoginThrottle,)
 
 
 class RefreshView(TokenRefreshView):
@@ -83,36 +100,7 @@ class CurrentUserProfileView(generics.RetrieveUpdateAPIView):
         if not self.request.user.is_authenticated:
             return User.objects.none()
 
-        queryset = User.objects.filter(pk=self.request.user.pk).annotate(
-            library_games_count=Count("library_items", distinct=True),
-            favorite_games_count=Count(
-                "library_items",
-                filter=Q(library_items__is_favorite=True),
-                distinct=True,
-            ),
-            wishlist_games_count=Count("game_wishlist_items", distinct=True),
-            reviews_count=Count("game_reviews", distinct=True),
-            posts_count=Count(
-                "community_posts",
-                filter=Q(community_posts__is_published=True),
-                distinct=True,
-            ),
-            followers_count=Count("follower_links", distinct=True),
-            following_count=Count("following_links", distinct=True),
-            friendships_low_count=Count(
-                "friendships_as_low",
-                filter=Q(friendships_as_low__status="accepted"),
-                distinct=True,
-            ),
-            friendships_high_count=Count(
-                "friendships_as_high",
-                filter=Q(friendships_as_high__status="accepted"),
-                distinct=True,
-            ),
-        )
-        return queryset.annotate(
-            friends_count=F("friendships_low_count") + F("friendships_high_count"),
-        )
+        return with_profile_stats(User.objects.filter(pk=self.request.user.pk))
 
     def get_object(self):
         profile = self.get_queryset().get(pk=self.request.user.pk)

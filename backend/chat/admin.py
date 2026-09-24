@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import Conversation, Message, ConversationReport
+from .models import Conversation, ConversationPreference, Message, ConversationReport
 
 
 @admin.register(ConversationReport)
@@ -24,3 +24,11 @@ class MessageAdmin(admin.ModelAdmin):
     search_fields = ("sender__username", "body", "attachment_name")
     readonly_fields = ("created_at",)
     exclude = ("attachment",)
+
+
+@admin.register(ConversationPreference)
+class ConversationPreferenceAdmin(admin.ModelAdmin):
+    list_display = ("id", "conversation", "user", "muted", "cleared_at")
+    list_filter = ("muted",)
+    search_fields = ("user__username", "user__email")
+    list_select_related = ("conversation", "user")

@@ -18,7 +18,11 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     bio = models.CharField(max_length=500, blank=True)
     cover = models.ImageField(upload_to="covers/%Y/%m/", blank=True, null=True, validators=[FileExtensionValidator(["jpg", "jpeg", "png", "webp"]), validate_image_size])
-    language = models.CharField(max_length=5, choices=[("en", "English"), ("uk", "Українська")], default="en")
+    language = models.CharField(
+        max_length=5,
+        choices=[("en", "English"), ("ru", "Русский"), ("uk", "Українська")],
+        default="en",
+    )
     dark_theme = models.BooleanField(default=True)
     privacy_games = models.BooleanField(default=True)
     privacy_wishlist = models.BooleanField(default=True)
