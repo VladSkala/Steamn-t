@@ -13,20 +13,21 @@
   --v6-line: var(--border);
   --v6-line-strong: var(--border-strong);
   --font-heading: var(--font-ui);
-  --bg-main: #100d18;
-  --bg-deep: #0b0911;
-  --bg-panel: #191423;
-  --bg-card: #221b30;
-  --bg-card-hover: #2e253f;
-  --border: rgba(181,161,218,.14);
-  --border-strong: rgba(181,161,218,.28);
-  --text-primary: #f6f2fc;
-  --text-secondary: #bdb3ce;
-  --text-muted: #9d90b1;
-  --blue: #a879f5;
-  --blue-bright: #c6a6ff;
-  --purple: #9259eb;
-  --purple-bright: #bb94fb;
+  --bg-main: #181421;
+  --bg-deep: #110e18;
+  --bg-panel: #211b2b;
+  --bg-card: #2a2237;
+  --bg-card-hover: #382c49;
+  --border: rgba(203,188,230,.16);
+  --border-strong: rgba(203,188,230,.31);
+  --text-primary: #f7f4fb;
+  --text-secondary: #ccc2d7;
+  --text-muted: #a99cb8;
+  --blue: #ad7cf6;
+  --blue-bright: #d0b1ff;
+  --purple: #9b61ee;
+  --purple-bright: #c39bff;
+  --accent-contrast: #fff;
   --pink: #f17b99;
   --success: #65c69a;
   --danger: #ee7e93;
@@ -63,7 +64,11 @@ body {
   min-height: 100vh;
   margin: 0;
   overflow-x: hidden;
-  background: var(--bg-main);
+  background:
+    radial-gradient(circle at 12% -8%, color-mix(in srgb,var(--purple) 13%,transparent), transparent 34rem),
+    radial-gradient(circle at 92% 18%, color-mix(in srgb,var(--blue) 8%,transparent), transparent 32rem),
+    linear-gradient(180deg, var(--bg-main), var(--bg-deep) 115%);
+  background-attachment: fixed;
   color: var(--text-primary);
 }
 
@@ -101,18 +106,20 @@ svg {
 
 :root[data-theme="light"] {
   color-scheme: light;
-  --bg-main: #f5f1fa;
-  --bg-deep: #ede6f5;
-  --bg-panel: #fffcff;
-  --bg-card: #eee7f7;
-  --bg-card-hover: #e0d5f0;
-  --border: rgba(77,49,112,.17);
-  --border-strong: rgba(77,49,112,.3);
-  --text-primary: #251732;
-  --text-secondary: #594568;
-  --text-muted: #715d80;
-  --purple: #7540c3;
-  --purple-bright: #6133a4;
-  --blue: #7540c3;
-  --blue-bright: #6133a4;
+  --bg-main: #dad6e0;
+  --bg-deep: #cbc6d2;
+  --bg-panel: #e7e3eb;
+  --bg-card: #f0edf3;
+  --bg-card-hover: #d6d0de;
+  --border: rgba(62,45,79,.19);
+  --border-strong: rgba(62,45,79,.32);
+  --text-primary: #282030;
+  --text-secondary: #514559;
+  --text-muted: #6c6074;
+  --purple: #7445b5;
+  --purple-bright: #5f358f;
+  --blue: #7445b5;
+  --blue-bright: #5f358f;
+  --accent-contrast: #fff;
+  --shadow-panel: 0 16px 42px rgba(48,35,58,.14);
 }

@@ -45,3 +45,19 @@ class AccountSecurityTests(TestCase):
         data = self.client.get(f"/api/users/{self.alice.pk}/").data
         self.assertNotIn("posts", data)
         self.assertIsNone(data["stats"]["posts"])
+
+    def test_public_profile_lists_followers_and_following(self):
+        from community.models import UserFollow
+
+        User = get_user_model()
+        carol = User.objects.create_user(username="carol_security", email="carol_security@example.test", password="Qp6!LongPassword")
+        UserFollow.objects.create(follower=self.bob, following=self.alice)
+        UserFollow.objects.create(follower=self.alice, following=carol)
+
+        followers = self.client.get(f"/api/users/{self.alice.pk}/content/?section=followers")
+        following = self.client.get(f"/api/users/{self.alice.pk}/content/?section=following")
+
+        self.assertEqual(followers.status_code, 200)
+        self.assertEqual([item["id"] for item in followers.data["results"]], [self.bob.pk])
+        self.assertEqual(following.status_code, 200)
+        self.assertEqual([item["id"] for item in following.data["results"]], [carol.pk])

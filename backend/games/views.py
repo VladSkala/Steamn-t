@@ -131,7 +131,11 @@ class DLCOwnershipMixin:
 
 
 class DLCListView(DLCOwnershipMixin, ListAPIView):
-    queryset = DLC.objects.filter(is_available=True).select_related("game")
+    queryset = (
+        DLC.objects.filter(is_available=True)
+        .select_related("game")
+        .prefetch_related("game__genres")
+    )
     serializer_class = DLCSerializer
     permission_classes = (AllowAny,)
     pagination_class = GamePageNumberPagination
@@ -150,14 +154,21 @@ class DLCListView(DLCOwnershipMixin, ListAPIView):
 
 
 class DLCDetailView(DLCOwnershipMixin, RetrieveAPIView):
-    queryset = DLC.objects.filter(is_available=True).select_related("game")
+    queryset = (
+        DLC.objects.filter(is_available=True)
+        .select_related("game")
+        .prefetch_related("game__genres")
+    )
     serializer_class = DLCSerializer
     permission_classes = (AllowAny,)
     http_method_names = ("get", "head", "options")
 
 
 class BundleListView(ListAPIView):
-    queryset = GameBundle.objects.filter(is_available=True).prefetch_related("games", "dlc__game")
+    queryset = GameBundle.objects.filter(is_available=True).prefetch_related(
+        "games__genres",
+        "dlc__game__genres",
+    )
     serializer_class = BundleSerializer
     permission_classes = (AllowAny,)
     pagination_class = GamePageNumberPagination
@@ -165,7 +176,10 @@ class BundleListView(ListAPIView):
 
 
 class BundleDetailView(RetrieveAPIView):
-    queryset = GameBundle.objects.filter(is_available=True).prefetch_related("games", "dlc__game")
+    queryset = GameBundle.objects.filter(is_available=True).prefetch_related(
+        "games__genres",
+        "dlc__game__genres",
+    )
     serializer_class = BundleSerializer
     permission_classes = (AllowAny,)
     http_method_names = ("get", "head", "options")

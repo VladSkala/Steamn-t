@@ -43,3 +43,37 @@ class SettingsAndPublicProfileTests(TestCase):
         old_session_client.credentials(HTTP_AUTHORIZATION=f"Bearer {session['access']}")
         self.assertEqual(old_session_client.get("/api/profile/").status_code, 401)
         self.assertEqual(old_session_client.post("/api/auth/token/refresh/", {"refresh": session["refresh"]}, format="json").status_code, 401)
+
+    def test_profile_accepts_every_supported_interface_language(self):
+        self.client.force_authenticate(self.user)
+
+        for language in ("en", "ru", "uk"):
+            response = self.client.patch(
+                "/api/profile/", {"language": language}, format="json"
+            )
+            self.assertEqual(response.status_code, 200)
+            self.assertEqual(response.data["language"], language)
+
+    def test_login_returns_the_complete_current_user_contract(self):
+        self.user.dark_theme = False
+        self.user.notification_preferences["message_sound"] = False
+        self.user.save(update_fields=("dark_theme", "notification_preferences"))
+        WalletTransaction.objects.create(
+            user=self.user,
+            amount="18.25",
+            kind="topup",
+            description="Login balance",
+            event_key="login-balance",
+        )
+
+        response = self.client.post(
+            "/api/auth/token/",
+            {"email": self.user.email, "password": "StrongPass123!"},
+            format="json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(response.data["user"]["dark_theme"])
+        self.assertFalse(response.data["user"]["notification_preferences"]["message_sound"])
+        self.assertEqual(response.data["user"]["wallet_balance"], "18.25")
+        self.assertIn("stats", response.data["user"])

@@ -1,6 +1,7 @@
 from datetime import date
 from decimal import Decimal
 from io import BytesIO
+from pathlib import Path
 import shutil
 import tempfile
 
@@ -21,6 +22,7 @@ from community.models import (
 )
 from games.models import Game
 from store.models import LibraryItem, Order, OrderItem
+from users.models import WalletTransaction
 
 
 User = get_user_model()
@@ -135,6 +137,13 @@ class CurrentUserProfileContractTests(APITestCase):
             requested_by=self.user,
             status=Friendship.Status.ACCEPTED,
         )
+        WalletTransaction.objects.create(
+            user=self.user,
+            amount=Decimal("42.50"),
+            kind="topup",
+            description="Profile contract balance",
+            event_key="profile-contract-balance",
+        )
 
         self.authenticate()
         response = self.client.get(self.profile_url)
@@ -142,6 +151,7 @@ class CurrentUserProfileContractTests(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.data["id"], self.user.pk)
         self.assertEqual(response.data["display_name"], "Profile Owner")
+        self.assertEqual(response.data["wallet_balance"], "42.50")
         self.assertEqual(
             response.data["stats"],
             {
@@ -221,16 +231,19 @@ class CurrentUserProfileContractTests(APITestCase):
                 {"avatar": avatar},
                 format="multipart",
             )
-            clear_response = self.client.patch(
-                self.profile_url,
-                {"avatar": None},
-                format="json",
-            )
+            uploaded_name = self.user.__class__.objects.get(pk=self.user.pk).avatar.name
+            with self.captureOnCommitCallbacks(execute=True):
+                clear_response = self.client.patch(
+                    self.profile_url,
+                    {"avatar": None},
+                    format="json",
+                )
 
         self.assertEqual(upload_response.status_code, status.HTTP_200_OK)
         self.assertIn("/media/avatars/", upload_response.data["avatar"])
         self.assertEqual(clear_response.status_code, status.HTTP_200_OK)
         self.assertIsNone(clear_response.data["avatar"])
+        self.assertFalse((Path(self.media_root) / uploaded_name).exists())
 
     def test_profile_supports_only_get_and_patch(self):
         self.authenticate()

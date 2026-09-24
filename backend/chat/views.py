@@ -1,9 +1,11 @@
 from pathlib import Path
+from datetime import datetime, timezone as datetime_timezone
 from PIL import Image, UnidentifiedImageError
 
 from django.contrib.auth import get_user_model
 from django.db import transaction
-from django.db.models import Q
+from django.db.models import Count, DateTimeField, IntegerField, OuterRef, Q, Subquery, Value
+from django.db.models.functions import Coalesce
 from django.http import FileResponse
 from django.shortcuts import get_object_or_404
 from django.utils import timezone
@@ -29,13 +31,24 @@ def is_blocked(a, b):
 
 
 def can_message(sender, recipient):
-    if not recipient.is_active or is_blocked(sender, recipient) or recipient.privacy_messages == "nobody":
+    if message_unavailable_reason(sender, recipient):
         return False
+    return True
+
+
+def message_unavailable_reason(sender, recipient):
+    if not recipient.is_active:
+        return "inactive"
+    if is_blocked(sender, recipient):
+        return "blocked"
+    if recipient.privacy_messages == "nobody":
+        return "privacy"
     if recipient.privacy_messages == "friends":
         from community.models import Friendship
         low, high = sorted((sender.pk, recipient.pk))
-        return Friendship.objects.filter(user_low_id=low, user_high_id=high, status="accepted").exists()
-    return True
+        if not Friendship.objects.filter(user_low_id=low, user_high_id=high, status="accepted").exists():
+            return "friends_only"
+    return None
 
 
 def visible_messages(conversation, user):
@@ -62,19 +75,67 @@ class ChatPagination(PageNumberPagination):
     max_page_size = 100
 
 
+class ConversationPagination(PageNumberPagination):
+    page_size = 100
+    page_size_query_param = "page_size"
+    max_page_size = 100
+
+
 class ConversationListView(APIView):
     permission_classes = (IsAuthenticated,)
 
     def get(self, request):
+        preference = ConversationPreference.objects.filter(
+            conversation_id=OuterRef("pk"),
+            user=request.user,
+        )
+        epoch = datetime(1970, 1, 1, tzinfo=datetime_timezone.utc)
+        conversations = accessible_conversations(request.user).annotate(
+            viewer_cleared_at=Coalesce(
+                Subquery(preference.values("cleared_at")[:1]),
+                Value(epoch),
+                output_field=DateTimeField(),
+            ),
+        )
+        visible = Message.objects.filter(
+            conversation_id=OuterRef("pk"),
+            created_at__gt=OuterRef("viewer_cleared_at"),
+        )
+        conversations = conversations.annotate(
+            last_message_id=Subquery(
+                visible.order_by("-created_at", "-pk").values("pk")[:1],
+                output_field=IntegerField(),
+            ),
+            unread_count=Coalesce(
+                Subquery(
+                    visible.filter(read_at__isnull=True)
+                    .exclude(sender=request.user)
+                    .values("conversation_id")
+                    .annotate(total=Count("pk"))
+                    .values("total")[:1],
+                    output_field=IntegerField(),
+                ),
+                0,
+            ),
+        )
+        paginator = ConversationPagination()
+        page = paginator.paginate_queryset(conversations, request, view=self)
+        last_messages = Message.objects.filter(
+            pk__in=[item.last_message_id for item in page if item.last_message_id]
+        ).in_bulk()
         rows = []
-        for conversation in accessible_conversations(request.user)[:100]:
-            messages = visible_messages(conversation, request.user)
-            last = messages.order_by("-created_at", "-pk").first()
+        for conversation in page:
+            last = last_messages.get(conversation.last_message_id)
             rows.append({"id": conversation.pk, "other_user": user_payload(conversation.other(request.user)),
                          "last_message": message_payload(last) if last else None,
-                         "unread_count": messages.filter(read_at__isnull=True).exclude(sender=request.user).count(),
+                         "unread_count": conversation.unread_count,
                          "updated_at": conversation.updated_at})
-        return Response({"items": rows})
+        return Response({
+            "count": paginator.page.paginator.count,
+            "next": paginator.get_next_link(),
+            "previous": paginator.get_previous_link(),
+            "items": rows,
+        })
 
     def post(self, request):
         other = get_object_or_404(User, pk=request.data.get("user_id"), is_active=True)
@@ -101,10 +162,12 @@ class ConversationDetailView(APIView):
         conversation = get_object_or_404(accessible_conversations(request.user), pk=conversation_id)
         preference = ConversationPreference.objects.filter(conversation=conversation, user=request.user).first()
         other = conversation.other(request.user)
+        unavailable_reason = message_unavailable_reason(request.user, other)
         return Response({"id": conversation.pk, "other_user": user_payload(other),
                          "muted": bool(preference and preference.muted),
                          "blocked": UserBlock.objects.filter(blocker=request.user, blocked=other).exists(),
-                         "can_message": can_message(request.user, other)})
+                         "can_message": unavailable_reason is None,
+                         "message_unavailable_reason": unavailable_reason})
 
     def patch(self, request, conversation_id):
         conversation = get_object_or_404(accessible_conversations(request.user), pk=conversation_id)

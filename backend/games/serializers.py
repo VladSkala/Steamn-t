@@ -124,17 +124,32 @@ class BundleSerializer(AbsoluteCoverMixin, serializers.ModelSerializer):
     purchase_price = serializers.SerializerMethodField()
     is_owned = serializers.SerializerMethodField()
 
+    def owned_ids(self):
+        if hasattr(self, "_owned_ids"):
+            return self._owned_ids
+        from store.models import LibraryDLCItem, LibraryItem
+
+        user = getattr(self.context.get("request"), "user", None)
+        if user and user.is_authenticated:
+            owned_games = set(
+                LibraryItem.objects.filter(user=user).values_list("game_id", flat=True)
+            )
+            owned_dlc = set(
+                LibraryDLCItem.objects.filter(user=user).values_list("dlc_id", flat=True)
+            )
+        else:
+            owned_games, owned_dlc = set(), set()
+        self._owned_ids = owned_games, owned_dlc
+        return self._owned_ids
+
     def quote(self, bundle):
         from decimal import Decimal
-        from store.models import LibraryItem, LibraryDLCItem
         if not hasattr(self, "_quotes"):
             self._quotes = {}
         if bundle.pk in self._quotes:
             return self._quotes[bundle.pk]
-        user = getattr(self.context.get("request"), "user", None)
         games, dlc = list(bundle.games.all()), list(bundle.dlc.all())
-        owned_games = set(LibraryItem.objects.filter(user=user).values_list("game_id", flat=True)) if user and user.is_authenticated else set()
-        owned_dlc = set(LibraryDLCItem.objects.filter(user=user).values_list("dlc_id", flat=True)) if user and user.is_authenticated else set()
+        owned_games, owned_dlc = self.owned_ids()
         missing = [item for item in games if item.pk not in owned_games] + [item for item in dlc if item.pk not in owned_dlc]
         total = sum((item.price for item in games + dlc), Decimal("0.00"))
         subtotal = sum((item.price for item in missing), Decimal("0.00"))

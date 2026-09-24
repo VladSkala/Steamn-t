@@ -59,7 +59,7 @@ Checkout records immutable item prices, removes purchased games from Wishlist, a
 | GET, POST | `/community/posts/` | Public read; user write | Filtered community feed or create a post |
 | GET, PATCH, DELETE | `/community/posts/{id}/` | Public read; author write | Stable post detail and owner lifecycle |
 | POST | `/library/posts/{id}/reaction/` | User | Idempotent reaction toggle |
-| GET, POST | `/library/posts/{id}/comments/` | Public read; user write | Comment list and create |
+| GET, POST | `/library/posts/{id}/comments/` | Public read; user write | Paginated comment list and create |
 
 Community list filters include `scope`, `kind`, `game`, `search`, `ordering`, `page`, and bounded `page_size`. Uploaded post/review media is validated and deleted with its owning record.
 
@@ -72,7 +72,7 @@ Community list filters include `scope`, `kind`, `game`, `search`, `ordering`, `p
 | POST | `/friends/requests/` | Create an idempotent request |
 | POST | `/friends/requests/{id}/accept/`, `/reject/`, `/cancel/` | Request lifecycle |
 | DELETE | `/friends/{userId}/` | Remove a friendship |
-| GET, POST | `/chat/conversations/` | List or create a one-to-one conversation |
+| GET, POST | `/chat/conversations/` | Paginated list or create a one-to-one conversation |
 | GET | `/chat/conversations/{id}/` | Participant-only conversation detail |
 | GET, POST | `/chat/conversations/{id}/messages/` | Paginated history or text/media send |
 | POST | `/chat/conversations/{id}/read/` | Mark incoming messages read |
@@ -111,4 +111,4 @@ Validation errors use HTTP 400 with field messages. Authentication failures use 
 
 Account deletion cascades through demo orders, wallet, library, social relations, published content and conversations; corresponding profile/chat/post/review files are removed after transaction commit. Conversation deletion affects both participants. This is explicitly disclosed in UI and Privacy Policy.
 
-Remaining boundedness limits: conversation overview returns at most 100 conversations; comments currently return the full list. These contracts should be extended before deploying for large user populations.
+Conversation overview and comments use bounded page-number pagination while preserving their existing `items` collection field.

@@ -19,6 +19,7 @@ from .social_services import block_user, public_identity
 
 
 class RecoveryThrottle(AnonRateThrottle):
+    scope = "password_recovery"
     rate = "5/hour"
 
 
@@ -89,20 +90,26 @@ class PublicProfileContentView(APIView):
     authentication_classes = ()
 
     def get(self, request, user_id):
-        from community.models import CommunityPost, Friendship, GameReview
+        from community.models import CommunityPost, Friendship, GameReview, UserFollow
         user = get_object_or_404(User, pk=user_id, is_active=True)
         section = request.query_params.get("section", "games")
-        privacy_key = {"games": "privacy_games", "wishlist": "privacy_wishlist", "friends": "privacy_friends"}.get(section, "privacy_activity")
-        if not getattr(user, privacy_key):
+        privacy_key = {"games": "privacy_games", "wishlist": "privacy_wishlist", "friends": "privacy_friends"}.get(section)
+        if privacy_key is None and section not in {"followers", "following"}:
+            privacy_key = "privacy_activity"
+        if privacy_key and not getattr(user, privacy_key):
             return Response({"detail": "This section is private."}, status=403)
         if section == "games":
             queryset = user.library_items.filter(Q(order__isnull=True) | Q(order__user=user)).select_related("game").order_by("-created_at", "-pk")
         elif section == "wishlist":
             queryset = user.game_wishlist_items.select_related("game").order_by("-created_at", "-pk")
         elif section == "reviews":
-            queryset = GameReview.objects.filter(user=user).select_related("game").order_by("-created_at", "-pk")
+            queryset = GameReview.objects.filter(user=user).select_related("game").prefetch_related("images").order_by("-created_at", "-pk")
         elif section == "friends":
             queryset = Friendship.objects.filter(Q(user_low=user) | Q(user_high=user), status="accepted").select_related("user_low", "user_high").order_by("-pk")
+        elif section == "followers":
+            queryset = UserFollow.objects.filter(following=user).select_related("follower").order_by("-created_at", "-pk")
+        elif section == "following":
+            queryset = UserFollow.objects.filter(follower=user).select_related("following").order_by("-created_at", "-pk")
         else:
             kinds = {"discussions": "forum", "screenshots": "screenshot", "videos": "video", "guides": "guide", "news": "news"}
             if section not in {"activity", *kinds}:
@@ -116,13 +123,17 @@ class PublicProfileContentView(APIView):
                 queryset = queryset.filter(game__title__icontains=search)
             elif section == "friends":
                 queryset = queryset.filter(Q(user_low=user, user_high__username__icontains=search) | Q(user_high=user, user_low__username__icontains=search))
+            elif section == "followers":
+                queryset = queryset.filter(Q(follower__username__icontains=search) | Q(follower__first_name__icontains=search) | Q(follower__last_name__icontains=search))
+            elif section == "following":
+                queryset = queryset.filter(Q(following__username__icontains=search) | Q(following__first_name__icontains=search) | Q(following__last_name__icontains=search))
             else:
                 queryset = queryset.filter(Q(title__icontains=search) | Q(body__icontains=search))
         ordering = request.query_params.get("ordering", "latest")
         if ordering == "oldest":
             queryset = queryset.reverse()
         elif ordering == "title":
-            field = "game__title" if section in {"games", "wishlist", "reviews"} else ("pk" if section == "friends" else "title")
+            field = "game__title" if section in {"games", "wishlist", "reviews"} else ("follower__username" if section == "followers" else "following__username" if section == "following" else "pk" if section == "friends" else "title")
             queryset = queryset.order_by(field, "pk")
         paginator = PageNumberPagination()
         paginator.page_size = 12
@@ -132,9 +143,12 @@ class PublicProfileContentView(APIView):
             if section in {"games", "wishlist", "reviews"}:
                 row = {"id": item.pk, "title": item.game.title, "url": f"/games/{item.game_id}", "image": item.game.cover.url if item.game.cover else None}
                 if section == "reviews":
-                    row.update(body=item.body, meta=f"{item.rating}/5")
+                    row.update(body=item.body, meta=f"{item.rating}/5", images=[{"id": image.pk, "image": image.image.url} for image in item.images.all()])
             elif section == "friends":
                 other = item.other_user(user)
+                row = {"id": other.pk, "title": other.username, "url": f"/users/{other.pk}", "image": other.avatar.url if other.avatar else None, "meta": "Online" if other.is_online else "Offline"}
+            elif section in {"followers", "following"}:
+                other = item.follower if section == "followers" else item.following
                 row = {"id": other.pk, "title": other.username, "url": f"/users/{other.pk}", "image": other.avatar.url if other.avatar else None, "meta": "Online" if other.is_online else "Offline"}
             else:
                 row = {"id": item.pk, "title": item.title, "url": f"/community/posts/{item.pk}", "body": item.body[:240], "meta": item.kind, "image": item.media_file.url if item.media_file and item.kind == "screenshot" else None}

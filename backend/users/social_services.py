@@ -16,15 +16,6 @@ def has_block_between(a_id, b_id):
     return UserBlock.objects.filter(Q(blocker_id=a_id, blocked_id=b_id) | Q(blocker_id=b_id, blocked_id=a_id)).exists()
 
 
-are_users_blocked = has_block_between
-
-
-def blocked_user_ids(user):
-    user_id = _id(user)
-    rows = UserBlock.objects.filter(Q(blocker_id=user_id) | Q(blocked_id=user_id)).values_list("blocker_id", "blocked_id")
-    return {other for pair in rows for other in pair if other != user_id}
-
-
 @transaction.atomic
 def block_user(*, blocker, blocked):
     from community.models import Friendship, UserFollow
