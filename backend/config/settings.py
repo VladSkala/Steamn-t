@@ -120,6 +120,9 @@ else:
                 "application_name": os.getenv(
                     "POSTGRES_APPLICATION_NAME", "steamnt-django"
                 ),
+                # Neon requires TLS. Local PostgreSQL can keep the defaults from .env.example.
+                "sslmode": os.getenv("POSTGRES_SSLMODE", "prefer"),
+                "channel_binding": os.getenv("POSTGRES_CHANNEL_BINDING", "prefer"),
             },
         },
     }
@@ -174,7 +177,48 @@ MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 PRIVATE_MEDIA_ROOT = Path(os.getenv("PRIVATE_MEDIA_ROOT", BASE_DIR / "private_media"))
 
+# Local development keeps using the filesystem. Deployment can switch media to
+# Neon's S3-compatible Object Storage without changing model fields.
+USE_S3_STORAGE = env_bool("USE_S3_STORAGE", default=False)
+NEON_PUBLIC_BUCKET = os.getenv("NEON_PUBLIC_BUCKET", "steamnt-media")
+NEON_PRIVATE_BUCKET = os.getenv("NEON_PRIVATE_BUCKET", "steamnt-private")
+NEON_S3_COMMON_OPTIONS = {}
+
+if USE_S3_STORAGE:
+    NEON_S3_COMMON_OPTIONS = {
+        "access_key": os.environ["AWS_ACCESS_KEY_ID"],
+        "secret_key": os.environ["AWS_SECRET_ACCESS_KEY"],
+        "endpoint_url": os.environ["AWS_ENDPOINT_URL_S3"],
+        "region_name": os.getenv("AWS_REGION", "eu-central-1"),
+        # Neon explicitly requires path-style S3 requests for this endpoint.
+        "addressing_style": "path",
+        "signature_version": "s3v4",
+        "default_acl": None,
+        "file_overwrite": False,
+    }
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.s3.S3Storage",
+            "OPTIONS": {
+                **NEON_S3_COMMON_OPTIONS,
+                "bucket_name": NEON_PUBLIC_BUCKET,
+                # The bucket itself is Public in Neon, so media URLs do not
+                # need expiring signatures.
+                "querystring_auth": False,
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage",
+        },
+    }
+
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Render terminates HTTPS before forwarding requests to Gunicorn.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+SESSION_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 
 # Console delivery is explicit for local development; configure SMTP for deployment.
