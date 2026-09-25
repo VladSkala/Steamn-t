@@ -214,14 +214,12 @@ if USE_S3_STORAGE:
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Render terminates HTTPS before forwarding requests to Gunicorn.
 SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SESSION_COOKIE_SECURE = not DEBUG
 CSRF_COOKIE_SECURE = not DEBUG
 CSRF_TRUSTED_ORIGINS = env_list("DJANGO_CSRF_TRUSTED_ORIGINS")
 
 
-# Console delivery is explicit for local development; configure SMTP for deployment.
 DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "noreply@steamnt.local")
 FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
 PASSWORD_RESET_TIMEOUT = 3600
@@ -234,6 +232,23 @@ MAILERS = {
             "username": os.getenv("EMAIL_HOST_USER", ""),
             "password": os.getenv("EMAIL_HOST_PASSWORD", ""),
             "use_tls": env_bool("EMAIL_USE_TLS", True),
+        },
+    },
+}
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "handlers": {
+        "console": {
+            "class": "logging.StreamHandler",
+        },
+    },
+    "loggers": {
+        "django.request": {
+            "handlers": ["console"],
+            "level": "ERROR",
+            "propagate": False,
         },
     },
 }
