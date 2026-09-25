@@ -1,0 +1,125 @@
+:root {
+  --ui-surface: var(--bg-panel);
+  --ui-surface-raised: var(--bg-card);
+  --ui-line: var(--border);
+  --ui-line-strong: var(--border-strong);
+  --ui-accent: var(--purple);
+  --ui-ease: cubic-bezier(.22,1,.36,1);
+  --ui-spring: cubic-bezier(.34,1.56,.64,1);
+  --ui-shadow: var(--shadow-panel);
+  --ui-radius: var(--radius-md);
+  --v6-panel: var(--bg-panel);
+  --v6-panel-strong: var(--bg-card);
+  --v6-line: var(--border);
+  --v6-line-strong: var(--border-strong);
+  --font-heading: var(--font-ui);
+  --bg-main: #181421;
+  --bg-deep: #110e18;
+  --bg-panel: #211b2b;
+  --bg-card: #2a2237;
+  --bg-card-hover: #382c49;
+  --border: rgba(203,188,230,.16);
+  --border-strong: rgba(203,188,230,.31);
+  --text-primary: #f7f4fb;
+  --text-secondary: #ccc2d7;
+  --text-muted: #a99cb8;
+  --blue: #ad7cf6;
+  --blue-bright: #d0b1ff;
+  --purple: #9b61ee;
+  --purple-bright: #c39bff;
+  --accent-contrast: #fff;
+  --pink: #f17b99;
+  --success: #65c69a;
+  --danger: #ee7e93;
+  --content-width: 1440px;
+  --font-ui: "Steamn’t UI", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --shadow-panel: 0 16px 48px #07050c66;
+  font-family: var(--font-ui);
+  color-scheme: dark;
+  background: var(--bg-main);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+  background: var(--bg-main);
+  scroll-behavior: smooth;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 12% -8%, color-mix(in srgb,var(--purple) 13%,transparent), transparent 34rem),
+    radial-gradient(circle at 92% 18%, color-mix(in srgb,var(--blue) 8%,transparent), transparent 32rem),
+    linear-gradient(180deg, var(--bg-main), var(--bg-deep) 115%);
+  background-attachment: fixed;
+  color: var(--text-primary);
+}
+
+#root {
+  min-height: 100vh;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img,
+picture,
+svg {
+  display: block;
+  max-width: 100%;
+}
+
+:where(a, button, input, select, textarea):focus-visible {
+  outline: 3px solid var(--purple-bright);
+  outline-offset: 3px;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg-main: #dad6e0;
+  --bg-deep: #cbc6d2;
+  --bg-panel: #e7e3eb;
+  --bg-card: #f0edf3;
+  --bg-card-hover: #d6d0de;
+  --border: rgba(62,45,79,.19);
+  --border-strong: rgba(62,45,79,.32);
+  --text-primary: #282030;
+  --text-secondary: #514559;
+  --text-muted: #6c6074;
+  --purple: #7445b5;
+  --purple-bright: #5f358f;
+  --blue: #7445b5;
+  --blue-bright: #5f358f;
+  --accent-contrast: #fff;
+  --shadow-panel: 0 16px 42px rgba(48,35,58,.14);
+}

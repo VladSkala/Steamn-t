@@ -1,0 +1,440 @@
+import { getLocale, t, useLocale } from "../i18n/index.js";
+import { useMemo, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { createLibraryCollection, deleteLibraryCollection, togglePostReaction, updateLibraryCollection, updateLibraryItem } from "../api/library";
+import CatalogFeedback from "../components/CatalogFeedback";
+import LibraryArtwork from "../components/library/LibraryArtwork";
+import LibraryFrame from "../components/library/LibraryFrame";
+import LibraryPostCard from "../components/library/LibraryPostCard";
+import StoreToolbar from "../components/StoreToolbar";
+import useModalFocus from "../hooks/useModalFocus";
+import { useLibraryHome } from "../hooks/useLibraryExperience";
+import { communityPostPath } from "../utils/communityPostLinks";
+const dateFormatter = {
+  format: value => new Intl.DateTimeFormat(document.documentElement.dataset.locale || "en", {
+    day: "numeric",
+    month: "short",
+    year: "numeric"
+  }).format(value)
+};
+const formatPrice = value => {
+  const price = Number(value);
+  if (!Number.isFinite(price)) return t("Unavailable");
+  return price === 0 ? t("Free") : new Intl.NumberFormat(getLocale(), { style: "currency", currency: "USD" }).format(price);
+};
+const formatDate = value => {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? t("Unavailable") : dateFormatter.format(date);
+};
+const getTimestamp = value => {
+  const timestamp = Date.parse(value);
+  return Number.isNaN(timestamp) ? 0 : timestamp;
+};
+const getMutationError = (error, fallback) => {
+  const data = error.response?.data;
+  if (typeof data?.detail === "string") return data.detail;
+  if (Array.isArray(data?.name)) return data.name[0];
+  if (Array.isArray(data?.game_ids)) return data.game_ids[0];
+  return fallback;
+};
+function SearchIcon() {
+  useLocale();
+  return <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="6.5" />
+      <path d="m16 16 4 4" />
+    </svg>;
+}
+function StarIcon({
+  filled = false
+}) {
+  useLocale();
+  return <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path className={filled ? "filled" : ""} d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9L12 3Z" />
+    </svg>;
+}
+function EditorialSection({
+  title,
+  linkLabel,
+  posts,
+  onLike,
+  onComments
+}) {
+  useLocale();
+  if (posts.length === 0) return null;
+  return <section className="library-editorial-section">
+      <div className="library-section-heading">
+        <h2>{title}</h2>
+        <Link className="library-section-link" to="/library/feed">
+          <span>{linkLabel}</span>
+          <span className="library-section-link-arrow" aria-hidden="true">
+            →
+          </span>
+        </Link>
+      </div>
+      <div className="library-editorial-grid">
+        {posts.map(post => <LibraryPostCard post={post} compact key={post.id} onLike={onLike} onComments={onComments} />)}
+      </div>
+    </section>;
+}
+function LibraryGridCard({
+  item,
+  favoriteBusy,
+  onFavorite
+}) {
+  useLocale();
+  const game = item.game ?? {};
+  const title = game.title?.trim() || t("Untitled game");
+  return <article className="library-grid-card">
+      <Link className="library-grid-link" to={`/library/games/${game.id}`}>
+        <LibraryArtwork game={game} className="library-grid-artwork" />
+        <span className="library-grid-card-body">
+          <strong>{title}</strong>
+          <span>{game.developer || t("Steamnt catalog")}</span>
+          <span className="library-grid-meta">
+            <time dateTime={item.purchased_at || undefined}>
+              {formatDate(item.purchased_at)}
+            </time>
+            <b>{formatPrice(item.price_at_purchase)}</b>
+          </span>
+        </span>
+      </Link>
+      <button type="button" className={`library-favorite-button${item.is_favorite ? " active" : ""}`} aria-label={t(item.is_favorite ? "Remove {title} from favorites" : "Add {title} to favorites", { title })} aria-pressed={item.is_favorite} disabled={favoriteBusy} onClick={() => onFavorite(item)}>
+        <StarIcon filled={item.is_favorite} />
+      </button>
+    </article>;
+}
+function LibraryListCard({
+  item,
+  favoriteBusy,
+  onFavorite
+}) {
+  useLocale();
+  const game = item.game ?? {};
+  const title = game.title?.trim() || t("Untitled game");
+  return <article className="library-list-card">
+      <Link className="library-list-cover-link" to={`/library/games/${game.id}`}>
+        <LibraryArtwork game={game} className="library-list-artwork" wide />
+      </Link>
+      <div className="library-list-copy">
+        <Link to={`/library/games/${game.id}`}>{title}</Link>
+        <span>{game.developer || t("Steamnt catalog")}</span>
+      </div>
+      <div className="library-list-size">
+        <span>{t("Disk size")}</span>
+        <strong>
+          {game.disk_size_gb ? `${Number(game.disk_size_gb).toLocaleString(document.documentElement.dataset.locale || "en")} GB` : t("Not specified")}
+        </strong>
+      </div>
+      <div className="library-list-actions">
+        {game.download_url ? <a href={game.download_url} target="_blank" rel="noreferrer">{t("Download")}</a> : <Link to={`/library/games/${game.id}`}>{t("Details")}</Link>}
+        <button type="button" className={item.is_favorite ? "active" : ""} aria-label={t(item.is_favorite ? "Remove {title} from favorites" : "Add {title} to favorites", { title })} aria-pressed={item.is_favorite} disabled={favoriteBusy} onClick={() => onFavorite(item)}>
+          <StarIcon filled={item.is_favorite} />
+        </button>
+      </div>
+    </article>;
+}
+function CollectionDialog({
+  items,
+  collection,
+  submitting,
+  error,
+  onClose,
+  onSave,
+  onDelete
+}) {
+  useLocale();
+  const {
+    dialogRef,
+    handleKeyDown
+  } = useModalFocus(onClose, submitting);
+  const [name, setName] = useState(collection?.name || "");
+  const [selectedIds, setSelectedIds] = useState(collection?.game_ids?.map(String) || []);
+  const [nameError, setNameError] = useState("");
+  const [gameQuery, setGameQuery] = useState("");
+  const toggleGame = gameId => {
+    const key = String(gameId);
+    setSelectedIds(current => current.includes(key) ? current.filter(id => id !== key) : [...current, key]);
+  };
+  const normalizedGameQuery = gameQuery.trim().toLocaleLowerCase();
+  const filteredItems = normalizedGameQuery ? items.filter(item => String(item.game?.title || "").toLocaleLowerCase().includes(normalizedGameQuery)) : items;
+  const selectedItems = items.filter(item => selectedIds.includes(String(item.game?.id)));
+  return <div className="library-dialog-backdrop" role="presentation" onMouseDown={onClose}>
+      <section className="library-collection-dialog" ref={dialogRef} onKeyDown={handleKeyDown} tabIndex={-1} role="dialog" aria-modal="true" aria-labelledby="collection-dialog-title" onMouseDown={event => event.stopPropagation()}>
+        <div className="library-dialog-heading">
+          <div>
+            <span>{t("COLLECTION")}</span>
+            <h2 id="collection-dialog-title">
+              {collection ? t("Edit collection") : t("New collection")}
+            </h2>
+          </div>
+          <button type="button" onClick={onClose} aria-label={t("Close dialog")}>
+            ×
+          </button>
+        </div>
+
+        <form noValidate onSubmit={event => {
+        event.preventDefault();
+        const normalizedName = name.trim();
+        if (!normalizedName) {
+          setNameError("Enter a collection name.");
+          return;
+        }
+        setNameError("");
+        onSave({
+          name: normalizedName,
+          gameIds: selectedIds.map(Number)
+        });
+      }}>
+          <label className="library-dialog-name">
+            <span className="library-dialog-label-row">
+              <span>{t("Name")}</span>
+              <small>{name.length}/40</small>
+            </span>
+            <input value={name} maxLength={40} autoFocus aria-invalid={Boolean(nameError)} aria-describedby={nameError ? "collection-name-error" : undefined} onChange={event => {
+            setName(event.target.value);
+            if (nameError) setNameError("");
+          }} placeholder={t("Name your collection…")} />
+          </label>
+
+          <fieldset className="library-dialog-fieldset">
+            <legend>{t("Add games")}</legend>
+            <label className="library-dialog-game-search">
+              <span className="library-visually-hidden">{t("Search games")}</span>
+              <span className="library-dialog-search-icon" aria-hidden="true">
+                <SearchIcon />
+              </span>
+              <input type="search" value={gameQuery} onChange={event => setGameQuery(event.target.value)} placeholder={t("Search games by title…")} disabled={items.length === 0} />
+            </label>
+            <p className="library-dialog-hint">{t("Select games now or add them to this collection later.")}</p>
+
+            {selectedItems.length > 0 && <div className="library-dialog-selected-games">
+                {selectedItems.map(item => <button type="button" key={item.id} onClick={() => toggleGame(item.game.id)} aria-label={t("Remove {title} from collection", { title: item.game.title })}>
+                    <span>{item.game.title}</span>
+                    <span aria-hidden="true">×</span>
+                  </button>)}
+              </div>}
+
+            <div className="library-dialog-games">
+              {filteredItems.length > 0 ? filteredItems.map(item => <label key={item.id}>
+                    <input type="checkbox" checked={selectedIds.includes(String(item.game.id))} onChange={() => toggleGame(item.game.id)} />
+                    <LibraryArtwork game={item.game} className="library-dialog-artwork" />
+                    <span>{item.game.title}</span>
+                  </label>) : <p className="library-dialog-games-empty">{t("No matching games.")}</p>}
+            </div>
+          </fieldset>
+
+          {nameError && <p id="collection-name-error" className="library-dialog-error" role="alert">
+              {nameError}
+            </p>}
+          {error && <p className="library-dialog-error" role="alert">
+              {t(error)}
+            </p>}
+
+          <div className="library-dialog-actions">
+            {collection && <button type="button" className="danger" disabled={submitting} onClick={onDelete}>{t("Delete")}</button>}
+            <button type="button" disabled={submitting} onClick={onClose}>{t("Cancel")}</button>
+            <button type="submit" className="primary" disabled={submitting}>
+              {submitting ? t("Saving…") : collection ? t("Save changes") : t("Create collection")}
+            </button>
+          </div>
+        </form>
+      </section>
+    </div>;
+}
+function LibraryPage() {
+  useLocale();
+  const location = useLocation();
+  const navigate = useNavigate();
+  const {
+    data,
+    loading,
+    error,
+    retry,
+    refresh,
+    updatePost
+  } = useLibraryHome();
+  const [query, setQuery] = useState("");
+  const [sort, setSort] = useState("recent");
+  const [view, setView] = useState("grid");
+  const [section, setSection] = useState("all");
+  const [favoriteBusyId, setFavoriteBusyId] = useState(null);
+  const [dialogCollection, setDialogCollection] = useState(undefined);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogBusy, setDialogBusy] = useState(false);
+  const [dialogError, setDialogError] = useState("");
+  const [actionError, setActionError] = useState("");
+  const items = useMemo(() => data?.items ?? [], [data?.items]);
+  const collections = data?.collections ?? [];
+  const order = location.state?.order;
+  const checkoutSuccess = Boolean(location.state?.checkoutSuccess === true && order?.status === "completed");
+  const displayedItems = useMemo(() => {
+    const normalized = query.trim().toLocaleLowerCase();
+    let next = items.filter(item => {
+      if (section === "favorites" && !item.is_favorite) return false;
+      if (section.startsWith("collection:")) {
+        const collectionId = Number(section.split(":")[1]);
+        if (!item.collection_ids.includes(collectionId)) return false;
+      }
+      if (!normalized) return true;
+      return [item.game?.title, item.game?.developer].filter(Boolean).some(value => String(value).toLocaleLowerCase().includes(normalized));
+    });
+    next = [...next].sort((first, second) => {
+      if (sort === "title") {
+        return (first.game?.title || "").localeCompare(second.game?.title || "");
+      }
+      if (sort === "oldest") {
+        return getTimestamp(first.purchased_at) - getTimestamp(second.purchased_at);
+      }
+      if (sort === "size") {
+        return Number(second.game?.disk_size_gb || 0) - Number(first.game?.disk_size_gb || 0);
+      }
+      return getTimestamp(second.purchased_at) - getTimestamp(first.purchased_at);
+    });
+    return next;
+  }, [items, query, section, sort]);
+  const selectedCollection = section.startsWith("collection:") ? collections.find(item => item.id === Number(section.split(":")[1])) : null;
+  const handleFavorite = async item => {
+    setFavoriteBusyId(item.id);
+    setActionError("");
+    try {
+      await updateLibraryItem(item.id, {
+        is_favorite: !item.is_favorite
+      });
+      refresh();
+    } catch (requestError) {
+      setActionError(getMutationError(requestError, t("Favorites could not be updated. Please try again.")));
+    } finally {
+      setFavoriteBusyId(null);
+    }
+  };
+  const handlePostLike = async post => {
+    const result = await togglePostReaction(post.id);
+    updatePost(post.id, result);
+  };
+  const openCollectionDialog = collection => {
+    setDialogCollection(collection);
+    setDialogError("");
+    setDialogOpen(true);
+  };
+  const closeCollectionDialog = () => {
+    if (dialogBusy) return;
+    setDialogOpen(false);
+    setDialogCollection(undefined);
+    setDialogError("");
+  };
+  const saveCollection = async payload => {
+    setDialogBusy(true);
+    setDialogError("");
+    try {
+      if (dialogCollection) {
+        await updateLibraryCollection(dialogCollection.id, payload);
+      } else {
+        await createLibraryCollection(payload);
+      }
+      setDialogOpen(false);
+      setDialogCollection(undefined);
+      setDialogError("");
+      refresh();
+    } catch (requestError) {
+      setDialogError(getMutationError(requestError, t("The collection could not be saved.")));
+    } finally {
+      setDialogBusy(false);
+    }
+  };
+  const removeCollection = async () => {
+    if (!dialogCollection) return;
+    setDialogBusy(true);
+    setDialogError("");
+    try {
+      await deleteLibraryCollection(dialogCollection.id);
+      setSection("all");
+      setDialogOpen(false);
+      setDialogCollection(undefined);
+      refresh();
+    } catch (requestError) {
+      setDialogError(getMutationError(requestError, t("The collection could not be deleted.")));
+    } finally {
+      setDialogBusy(false);
+    }
+  };
+  return <LibraryFrame items={items} title={t("Library")} className="library-home-page" pageHeader={<header className="store-page-title library-page-header">
+          <h1>{t("Library")}</h1>
+        </header>} toolbar={<StoreToolbar label={t("Library")} search={query} onSearch={setQuery} placeholder={t("Search your library…")} searchLabel={t("Search your library")} sort={sort} onSort={setSort} sortOptions={[{
+    value: "recent",
+    label: "Recently purchased"
+  }, {
+    value: "oldest",
+    label: "Oldest purchases"
+  }, {
+    value: "title",
+    label: "Title A–Z"
+  }, {
+    value: "size",
+    label: "Largest install"
+  }]} countLabel={t(displayedItems.length === 1 ? "{count} game" : "{count} games", { count: displayedItems.length })} view={view} onView={setView} disabled={loading || Boolean(error) || items.length === 0} />} subnav={!loading && !error && items.length > 0 ? <div className="library-collection-heading">
+            <nav className="library-filter-tabs" aria-label={t("Library collections")}>
+              <button type="button" className={`ui-nav-tab${section === "all" ? " active" : ""}`} aria-pressed={section === "all"} onClick={() => setSection("all")}>{t("All games")}</button>
+              <button type="button" className={`ui-nav-tab${section === "favorites" ? " active" : ""}`} aria-pressed={section === "favorites"} onClick={() => setSection("favorites")}>{t("Favorites")}</button>
+              {collections.map(collection => <button type="button" key={collection.id} className={`ui-nav-tab${section === `collection:${collection.id}` ? " active" : ""}`} aria-pressed={section === `collection:${collection.id}`} onClick={() => setSection(`collection:${collection.id}`)}>
+                  {t(collection.name)}
+                </button>)}
+              <button type="button" className="library-add-button" aria-label={t("Create collection")} onClick={() => openCollectionDialog(undefined)}>
+                <span className="library-plus-icon" aria-hidden="true" />
+              </button>
+            </nav>
+            {selectedCollection && <button type="button" className="library-edit-collection" onClick={() => openCollectionDialog(selectedCollection)}>{t("Edit collection")}</button>}
+          </div> : null}>
+      {actionError && <p className="library-dialog-error" role="alert">
+          {t(actionError)}
+        </p>}
+      {checkoutSuccess && <section className="library-purchase-banner" role="status">
+          <span aria-hidden="true">✓</span>
+          <div>
+            <strong>{t("Purchase complete")}</strong>
+            <p>{t("Order #{id} is complete. Your new games are ready here.", { id: order.id })}</p>
+          </div>
+        </section>}
+
+      {loading && <CatalogFeedback kind="loading" title={t("Loading your library")} message={t("Syncing owned games, news, and community activity.")} className="library-feedback" />}
+
+      {!loading && error && <CatalogFeedback kind="error" title={t("Library unavailable")} message={t(error)} onRetry={retry} className="library-feedback" />}
+
+      {!loading && !error && items.length === 0 && <section className="library-empty-state">
+          <div className="library-empty-art" aria-hidden="true">
+            <span>S</span>
+          </div>
+          <span>{t("YOUR COLLECTION")}</span>
+          <h2>{t("Your library is ready for its first game.")}</h2>
+          <p>{t("Complete a demo checkout and every purchased title will appear here automatically.")}</p>
+          <Link to="/catalog" className="primary-button">{t("Explore catalog")}<span>→</span>
+          </Link>
+        </section>}
+
+      {!loading && !error && items.length > 0 && <>
+          <section className="library-collection" id="library-all-games">
+            {displayedItems.length === 0 ? <section className="library-search-empty">
+                <div aria-hidden="true">⌕</div>
+                <h2>{t("No games in this view")}</h2>
+                <p>{t("Try another search or choose a different collection.")}</p>
+                <button type="button" onClick={() => {
+            setQuery("");
+            setSection("all");
+          }}>{t("Show all games")}</button>
+              </section> : view === "grid" ? <div className="library-games-grid">
+                {displayedItems.map(item => <LibraryGridCard item={item} key={item.id} favoriteBusy={favoriteBusyId === item.id} onFavorite={handleFavorite} />)}
+              </div> : <div className="library-games-list">
+                {displayedItems.map(item => <LibraryListCard item={item} key={item.id} favoriteBusy={favoriteBusyId === item.id} onFavorite={handleFavorite} />)}
+              </div>}
+          </section>
+
+          {data.news.length > 0 && <section className="library-updates" aria-label={t("Library updates")}>
+              <EditorialSection title={t("News")} linkLabel={t("All news")} posts={data.news} onLike={handlePostLike} onComments={post => navigate(communityPostPath(post.id, {
+          comments: true
+        }))} />
+            </section>}
+        </>}
+
+      {dialogOpen && <CollectionDialog key={dialogCollection?.id ?? "new"} items={items} collection={dialogCollection} submitting={dialogBusy} error={dialogError} onClose={closeCollectionDialog} onSave={saveCollection} onDelete={removeCollection} />}
+    </LibraryFrame>;
+}
+export default LibraryPage;

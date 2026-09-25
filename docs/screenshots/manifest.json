@@ -1,0 +1,314 @@
+{
+  "generatedAt": "2026-09-24T23:16:01.453Z",
+  "baseUrl": "http://localhost:5180",
+  "locale": "ru",
+  "count": 34,
+  "screenshots": [
+    {
+      "file": "01-home.jpg",
+      "group": "Витрина",
+      "route": "/",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "02-catalog.jpg",
+      "group": "Витрина",
+      "route": "/catalog",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "03-game.jpg",
+      "group": "Витрина",
+      "route": "/games/1",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "04-game-dlc.jpg",
+      "group": "Витрина",
+      "route": "/games/1/dlc",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "05-dlc.jpg",
+      "group": "Витрина",
+      "route": "/dlc/1",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "06-bundles.jpg",
+      "group": "Витрина",
+      "route": "/bundles",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "07-bundle.jpg",
+      "group": "Витрина",
+      "route": "/bundles/4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "08-community.jpg",
+      "group": "Сообщество",
+      "route": "/community",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "09-community-post.jpg",
+      "group": "Сообщество",
+      "route": "/community/posts/1",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "10-news.jpg",
+      "group": "Сообщество",
+      "route": "/news",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "11-public-profile.jpg",
+      "group": "Профили",
+      "route": "/users/2",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "12-login.jpg",
+      "group": "Аккаунт",
+      "route": "/login",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "13-register.jpg",
+      "group": "Аккаунт",
+      "route": "/register",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "14-password-reset.jpg",
+      "group": "Аккаунт",
+      "route": "/reset-password",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "15-terms.jpg",
+      "group": "Документы",
+      "route": "/legal/terms",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "16-privacy.jpg",
+      "group": "Документы",
+      "route": "/legal/privacy",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "17-refund-policy.jpg",
+      "group": "Документы",
+      "route": "/legal/refund",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "18-library.jpg",
+      "group": "Библиотека",
+      "route": "/library",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "19-library-game.jpg",
+      "group": "Библиотека",
+      "route": "/library/games/5",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "20-library-feed.jpg",
+      "group": "Библиотека",
+      "route": "/library/feed",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "21-wishlist.jpg",
+      "group": "Покупки",
+      "route": "/wishlist",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "22-cart.jpg",
+      "group": "Покупки",
+      "route": "/cart",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "23-checkout.jpg",
+      "group": "Покупки",
+      "route": "/checkout",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "24-orders.jpg",
+      "group": "Покупки",
+      "route": "/orders",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "25-order.jpg",
+      "group": "Покупки",
+      "route": "/orders/4",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "26-profile.jpg",
+      "group": "Профили",
+      "route": "/profile",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "27-my-reviews.jpg",
+      "group": "Профили",
+      "route": "/profile/reviews",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "28-settings.jpg",
+      "group": "Профили",
+      "route": "/settings",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "29-friends.jpg",
+      "group": "Общение",
+      "route": "/friends",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "30-chat.jpg",
+      "group": "Общение",
+      "route": "/chat",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "31-notifications.jpg",
+      "group": "Общение",
+      "route": "/notifications",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      }
+    },
+    {
+      "file": "32-mobile-home.jpg",
+      "group": "Мобильный экран",
+      "route": "/",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "33-mobile-catalog.jpg",
+      "group": "Мобильный экран",
+      "route": "/catalog",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    },
+    {
+      "file": "34-mobile-profile.jpg",
+      "group": "Мобильный экран",
+      "route": "/profile",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      }
+    }
+  ]
+}
