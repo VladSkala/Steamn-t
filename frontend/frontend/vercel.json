@@ -2,14 +2,6 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "rewrites": [
     {
-      "source": "/api",
-      "destination": "https://steamnt-backend.onrender.com/api"
-    },
-    {
-      "source": "/api/:path*",
-      "destination": "https://steamnt-backend.onrender.com/api/:path*"
-    },
-    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
